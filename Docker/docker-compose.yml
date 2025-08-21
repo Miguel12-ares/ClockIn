@@ -1,0 +1,31 @@
+services:
+  app:
+    build: ../  # Apunta a la raíz del proyecto donde está Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=mysql+pymysql://user:pass@db:3306/ClockInDB  # Host 'db', no 'localhost'
+      - FLASK_ENV=production  # Para condicionar create_all
+    depends_on:
+      db:
+        condition: service_healthy  # Espera a que db esté listo
+    restart: on-failure  # Reinicia si falla (útil para retries)
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: ClockInDB
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=rootpass"]
+      interval: 5s  # Chequea cada 5s
+      timeout: 3s
+      retries: 10  # Intenta 10 veces
+      start_period: 20s  # Da 20s iniciales para init de MySQL
+
+volumes:
+  db_data:

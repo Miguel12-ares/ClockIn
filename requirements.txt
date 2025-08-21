@@ -1,0 +1,6 @@
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+# mysqlclient==2.2.4  # Drivers para MySQL se comenta para evitar instalacion ya que se requiere tenerlo instalado aparte para poder trabajr de mejor manera
+pymysql==1.1.1  # Alternativa pura de Python en manejo de MySQL
+python-dotenv==1.0.1
+gunicorn==22.0.0
