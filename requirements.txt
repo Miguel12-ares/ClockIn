@@ -4,3 +4,4 @@ Flask-SQLAlchemy==3.1.1
 pymysql==1.1.1  # Alternativa pura de Python en manejo de MySQL
 python-dotenv==1.0.1
 gunicorn==22.0.0
+Flask-Migrate==4.0.4
