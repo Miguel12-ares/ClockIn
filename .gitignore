@@ -1,1 +1,73 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Cython debug symbols
+cython_debug/
+
+# Python virtual environment
+venv/
+ENV/
+.env
+.env.*
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Flask stuff
+instance/
+.webassets-cache
+
+# Pytest cache
+.pytest_cache/
+
+# MySQL Socket file (unix)
+*.sock
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# Docker: Ignora archivos locales/sensibles, pero NO los principales (Dockerfile, docker-compose.yml)
+.dockerignore  # Si no quieres versionarlo (opcional; úsalo para builds locales)
+docker-compose.override.yml  # Overrides locales/personalizados
+docker-compose.dev.yml  # Configs de desarrollo locales
+**/docker/volumes/  # Volúmenes de datos (no subas datos de DB)
+**/docker/cache/  # Caches de Docker
+
+# Node Modules
 node_modules/
+
+# Tailwind output (generado, no versionar)
+app/static/css/tailwind.css
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Python coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+tests/__pycache__/
+
+# Migration files if using Flask-Migrate (opcional: ignora si no quieres versionar migraciones automáticas)
+#migrations/
