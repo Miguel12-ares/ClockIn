@@ -4,8 +4,10 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - DATABASE_URL=mysql+pymysql://user:pass@db:3306/ClockInDB  # Host 'db', no 'localhost'
+      - DATABASE_URL=mysql+pymysql://user:pass@db:3306/db_name  # Host 'db', no 'localhost'
       - FLASK_ENV=production  # Para condicionar create_all
+      - ADMIN_MODE=true  # Habilita acceso administrativo sin autenticación
+      - SECRET_KEY=your-secret-key-here  # Clave secreta para Flask
     depends_on:
       db:
         condition: service_healthy  # Espera a que db esté listo
@@ -15,7 +17,7 @@ services:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: ClockInDB
+      MYSQL_DATABASE: db_name
       MYSQL_USER: user
       MYSQL_PASSWORD: pass
     volumes:
