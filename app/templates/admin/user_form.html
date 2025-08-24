@@ -1,0 +1,224 @@
+{% extends "admin/base.html" %}
+
+{% block title %}
+    {% if action == 'create' %}Nuevo Usuario{% else %}Editar Usuario{% endif %} - ClockIn Admin
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white shadow rounded-lg">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">
+                        {% if action == 'create' %}Nuevo Usuario{% else %}Editar Usuario{% endif %}
+                    </h2>
+                    <p class="mt-1 text-sm text-gray-600">
+                        {% if action == 'create' %}
+                            Completa la información para crear un nuevo usuario
+                        {% else %}
+                            Modifica la información del usuario
+                        {% endif %}
+                    </p>
+                </div>
+                <a href="{{ url_for('admin.users_index') }}" 
+                   class="text-gray-600 hover:text-gray-900">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </a>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form method="POST" class="px-6 py-4">
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <!-- Documento -->
+                <div class="sm:col-span-2">
+                    <label for="idDocumento" class="block text-sm font-medium text-gray-700">
+                        Número de Documento *
+                    </label>
+                    <input type="number" 
+                           id="idDocumento" 
+                           name="idDocumento" 
+                           value="{{ user.idDocumento if user else '' }}"
+                           required
+                           class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <p class="mt-1 text-sm text-gray-500">Número único de identificación</p>
+                </div>
+
+                <!-- Nombre -->
+                <div>
+                    <label for="first_name" class="block text-sm font-medium text-gray-700">
+                        Nombre *
+                    </label>
+                    <input type="text" 
+                           id="first_name" 
+                           name="first_name" 
+                           value="{{ user.first_name if user else '' }}"
+                           required
+                           class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <!-- Apellido -->
+                <div>
+                    <label for="last_name" class="block text-sm font-medium text-gray-700">
+                        Apellido *
+                    </label>
+                    <input type="text" 
+                           id="last_name" 
+                           name="last_name" 
+                           value="{{ user.last_name if user else '' }}"
+                           required
+                           class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <!-- Tipo de Usuario -->
+                <div>
+                    <label for="user_type_id" class="block text-sm font-medium text-gray-700">
+                        Tipo de Usuario *
+                    </label>
+                    <select id="user_type_id" 
+                            name="user_type_id" 
+                            required
+                            class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Selecciona un tipo</option>
+                        {% for user_type in user_types %}
+                            <option value="{{ user_type.id }}" 
+                                    {% if user and user.user_type_id == user_type.id %}selected{% endif %}>
+                                {{ user_type.type_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Zona -->
+                <div>
+                    <label for="zona_id" class="block text-sm font-medium text-gray-700">
+                        Zona *
+                    </label>
+                    <select id="zona_id" 
+                            name="zona_id" 
+                            required
+                            class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Selecciona una zona</option>
+                        {% for zona in zonas %}
+                            <option value="{{ zona.id }}" 
+                                    {% if user and user.zona_id == zona.id %}selected{% endif %}>
+                                {{ zona.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Estado -->
+                <div>
+                    <label for="estado_id" class="block text-sm font-medium text-gray-700">
+                        Estado
+                    </label>
+                    <select id="estado_id" 
+                            name="estado_id"
+                            class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        {% for estado in estados %}
+                            <option value="{{ estado.id }}" 
+                                    {% if user and user.estado_id == estado.id %}selected{% elif not user and estado.id == 1 %}selected{% endif %}>
+                                {{ estado.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Estado Activo -->
+                <div>
+                    <label for="is_active" class="block text-sm font-medium text-gray-700">
+                        Estado del Usuario
+                    </label>
+                    <div class="mt-1">
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" 
+                                   id="is_active" 
+                                   name="is_active" 
+                                   value="true"
+                                   {% if not user or user.is_active %}checked{% endif %}
+                                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">Usuario activo</span>
+                        </label>
+                    </div>
+                    <p class="mt-1 text-sm text-gray-500">Los usuarios inactivos no pueden acceder al sistema</p>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="mt-8 flex justify-end space-x-3">
+                <a href="{{ url_for('admin.users_index') }}" 
+                   class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md text-sm font-medium">
+                    Cancelar
+                </a>
+                <button type="submit" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    {% if action == 'create' %}
+                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Crear Usuario
+                    {% else %}
+                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Actualizar Usuario
+                    {% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Help Section -->
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 class="text-sm font-medium text-blue-800 mb-2">Información Importante</h3>
+        <ul class="text-sm text-blue-700 space-y-1">
+            <li>• El número de documento debe ser único en el sistema</li>
+            <li>• Los campos marcados con * son obligatorios</li>
+            <li>• Los usuarios inactivos no pueden registrar entradas/salidas</li>
+            <li>• Los cambios se registrarán en el sistema de auditoría</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validación del formulario
+    const form = document.querySelector('form');
+    const idDocumentoInput = document.getElementById('idDocumento');
+    
+    form.addEventListener('submit', function(e) {
+        const idDocumento = idDocumentoInput.value.trim();
+        
+        if (!idDocumento || isNaN(idDocumento) || parseInt(idDocumento) <= 0) {
+            e.preventDefault();
+            alert('El número de documento debe ser un número válido mayor a 0');
+            idDocumentoInput.focus();
+            return false;
+        }
+        
+        // Validar que todos los campos requeridos estén completos
+        const requiredFields = form.querySelectorAll('[required]');
+        for (let field of requiredFields) {
+            if (!field.value.trim()) {
+                e.preventDefault();
+                alert('Por favor completa todos los campos requeridos');
+                field.focus();
+                return false;
+            }
+        }
+    });
+    
+    // Auto-focus en el primer campo
+    if (idDocumentoInput && !idDocumentoInput.value) {
+        idDocumentoInput.focus();
+    }
+});
+</script>
+{% endblock %}

@@ -5,5 +5,6 @@ load_dotenv()
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret')
-    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://user:pass@localhost/ClinkInDB'
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'mysql+pymysql://user:pass@localhost/ClinkInDB')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    ADMIN_MODE = os.getenv('ADMIN_MODE', 'true').lower() == 'true'
