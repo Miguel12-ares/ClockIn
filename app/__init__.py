@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
 app = Flask(__name__)
-app.config.from_object('config.Config')
+app.config.from_object('app.config.Config')
 db = SQLAlchemy(app)
 
 migrate = Migrate(app, db)
@@ -18,6 +18,7 @@ from app.controllers.access_log import access_log_bp
 from app.controllers.active_session import active_session_bp
 from app.controllers.anomaly import anomaly_bp
 from app.controllers.system_audit import system_audit_bp
+from app.controllers.auth import bp as auth_bp
 
 app.register_blueprint(user_bp, url_prefix='/users')
 app.register_blueprint(zona_bp, url_prefix='/zonas')
@@ -28,3 +29,10 @@ app.register_blueprint(access_log_bp, url_prefix='/access_logs')
 app.register_blueprint(active_session_bp, url_prefix='/active_sessions')
 app.register_blueprint(anomaly_bp, url_prefix='/anomalies')
 app.register_blueprint(system_audit_bp, url_prefix='/system_audits')
+app.register_blueprint(auth_bp, url_prefix='/auth')
+
+# Registrar ruta principal
+@app.route('/')
+def index():
+    from flask import redirect, url_for
+    return redirect(url_for('auth.login_form'))

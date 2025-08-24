@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ClockIn - Login</title>
+</head>
+<body>
+    <h1>ClockIn - Sistema de Acceso</h1>
+    <p>Ingrese su número de identificación para acceder</p>
+    
+    <div id="message" style="display: none;">
+        <h3 id="message-title"></h3>
+        <p id="message-text"></p>
+    </div>
+
+    <form id="loginForm">
+        <label for="idDocumento">Número de Identificación:</label><br>
+        <input type="text" id="idDocumento" name="idDocumento" required maxlength="20"><br><br>
+        
+        <button type="submit" id="loginButton">
+            <span id="loginButtonText">Iniciar Sesión</span>
+        </button>
+    </form>
+
+    <hr>
+    <p>Sistema de Registro de Entrada y Salida de Personal<br>© 2024 ClockIn - SENA</p>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    const messageDiv = document.getElementById('message');
+    const messageTitle = document.getElementById('message-title');
+    const messageText = document.getElementById('message-text');
+    const loginButton = document.getElementById('loginButton');
+    const loginButtonText = document.getElementById('loginButtonText');
+    const idDocumentoInput = document.getElementById('idDocumento');
+
+    function showMessage(type, title, text) {
+        messageTitle.textContent = title;
+        messageText.textContent = text;
+        messageDiv.style.display = 'block';
+        
+        if (type === 'success') {
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+    }
+
+    function hideMessage() {
+        messageDiv.style.display = 'none';
+    }
+
+    function setLoading(loading) {
+        loginButton.disabled = loading;
+        loginButtonText.textContent = loading ? 'Iniciando sesión...' : 'Iniciar Sesión';
+        idDocumentoInput.disabled = loading;
+    }
+
+    loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        hideMessage();
+        
+        const idDocumento = idDocumentoInput.value.trim();
+        
+        if (!idDocumento) {
+            showMessage('error', 'Error', 'Por favor ingrese su número de identificación');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const response = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    idDocumento: idDocumento
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Guardar token en localStorage
+                localStorage.setItem('clockin_token', data.data.token);
+                localStorage.setItem('clockin_user', JSON.stringify(data.data.user));
+                
+                showMessage('success', 'Éxito', data.message);
+                
+                // Redirigir según rol después de 1 segundo
+                setTimeout(() => {
+                    window.location.href = data.data.redirect_url;
+                }, 1000);
+                
+            } else {
+                showMessage('error', 'Error de autenticación', data.message);
+            }
+        } catch (error) {
+            showMessage('error', 'Error de conexión', 'No se pudo conectar con el servidor. Intente nuevamente.');
+        } finally {
+            setLoading(false);
+        }
+    });
+
+    // Focus en el input al cargar la página
+    idDocumentoInput.focus();
+    
+    // Limpiar mensajes cuando el usuario empiece a escribir
+    idDocumentoInput.addEventListener('input', hideMessage);
+});
+</script>
+</body>
+</html>

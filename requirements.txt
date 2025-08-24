@@ -5,3 +5,6 @@ pymysql==1.1.1  # Alternativa pura de Python en manejo de MySQL
 python-dotenv==1.0.1
 gunicorn==22.0.0
 Flask-Migrate==4.0.4
+PyJWT==2.8.0  # JWT para manejo de sesiones
+flask-cors==4.0.0  # CORS para APIs
+cryptography==41.0.7  # Requerido para autenticación MySQL 8.0

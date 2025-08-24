@@ -39,6 +39,8 @@ app/controllers/
 │   ├── assign.py           # POST /admin_zona - Asigna admin
 │   ├── remove.py           # DELETE /admin_zona/{admin_id}/{zona_id} - Remueve
 │   └── list.py             # GET /admin_zona - Lista asignaciones
+├── auth/                   # Sistema de autenticación
+│   └── auth.py             # POST/GET /auth/login, /auth/logout, /auth/verify
 ├── access_log/             # Gestión de logs de acceso
 │   ├── __init__.py
 │   ├── index.py            # GET /access_logs - Lista logs
