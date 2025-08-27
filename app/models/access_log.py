@@ -10,3 +10,6 @@ class AccessLog(db.Model):
     status = db.Column(db.String(50), nullable=True)
     notes = db.Column(db.Text, nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    # Relación con el usuario que creó el log
+    created_by_user = db.relationship('User', foreign_keys=[created_by], backref='created_logs', lazy=True)

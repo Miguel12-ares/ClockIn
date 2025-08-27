@@ -301,17 +301,31 @@ def dashboard():
         active_users = User.query.filter_by(is_active=True).count()
         inactive_users = User.query.filter_by(is_active=False).count()
         
-        # Estadísticas por tipo de usuario
-        user_types_stats = db.session.query(
-            UserType.type_name,
-            db.func.count(User.id).label('count')
-        ).join(User).group_by(UserType.id).all()
+        # Estadísticas por tipo de usuario (simplificado para evitar errores de JOIN)
+        user_types_stats = []
+        try:
+            user_types_stats = db.session.query(
+                UserType.type_name,
+                db.func.count(User.id).label('count')
+            ).join(User, UserType.id == User.user_type_id).group_by(UserType.id, UserType.type_name).all()
+        except Exception as e:
+            print(f"Error en estadísticas de tipos de usuario: {e}")
+            # Fallback: mostrar tipos sin estadísticas
+            user_types = UserType.query.all()
+            user_types_stats = [(ut.type_name, 0) for ut in user_types]
         
-        # Estadísticas por zona
-        zonas_stats = db.session.query(
-            Zona.nombre,
-            db.func.count(User.id).label('count')
-        ).join(User).group_by(Zona.id).all()
+        # Estadísticas por zona (simplificado para evitar errores de JOIN)
+        zonas_stats = []
+        try:
+            zonas_stats = db.session.query(
+                Zona.nombre,
+                db.func.count(User.id).label('count')
+            ).join(User, Zona.id == User.zona_id).group_by(Zona.id, Zona.nombre).all()
+        except Exception as e:
+            print(f"Error en estadísticas de zonas: {e}")
+            # Fallback: mostrar zonas sin estadísticas
+            zonas = Zona.query.all()
+            zonas_stats = [(z.nombre, 0) for z in zonas]
         
         return render_template('admin/dashboard.html',
                              total_users=total_users,
@@ -320,5 +334,12 @@ def dashboard():
                              user_types_stats=user_types_stats,
                              zonas_stats=zonas_stats)
     except Exception as e:
-        flash(f'Error al cargar dashboard: {str(e)}', 'error')
-        return redirect('/')
+        # En lugar de redirigir al index, mostrar un dashboard básico con error
+        print(f"Error en dashboard: {e}")
+        return render_template('admin/dashboard.html',
+                             total_users=0,
+                             active_users=0,
+                             inactive_users=0,
+                             user_types_stats=[],
+                             zonas_stats=[],
+                             error_message=f"Error al cargar estadísticas: {str(e)}")

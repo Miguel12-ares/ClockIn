@@ -7,7 +7,7 @@ from app.models.zona import Zona
 from app.models.estado import Estado
 
 def init_basic_data():
-    """Inicializa datos básicos necesarios para el funcionamiento del sistema"""
+    """Inicializa datos básicos necesarios para el funcionamiento del sistema -No usar en produccion"""
     
     # Crear tipos de usuario básicos
     user_types = [
@@ -32,11 +32,16 @@ def init_basic_data():
     ]
     
     for zona_data in zonas:
-        existing = Zona.query.filter_by(nombre=zona_data['nombre']).first()
-        if not existing:
-            zona = Zona(**zona_data)
-            db.session.add(zona)
-            print(f"Zona creada: {zona_data['nombre']}")
+        try:
+            existing = Zona.query.filter_by(nombre=zona_data['nombre']).first()
+            if not existing:
+                zona = Zona(**zona_data)
+                db.session.add(zona)
+                print(f"Zona creada: {zona_data['nombre']}")
+        except Exception as e:
+            print(f"Error al crear zona {zona_data['nombre']}: {e}")
+            # Continuar con la siguiente zona
+            continue
     
     # Crear estados básicos
     estados = [
@@ -47,11 +52,16 @@ def init_basic_data():
     ]
     
     for estado_data in estados:
-        existing = Estado.query.filter_by(nombre=estado_data['nombre']).first()
-        if not existing:
-            estado = Estado(**estado_data)
-            db.session.add(estado)
-            print(f"Estado creado: {estado_data['nombre']}")
+        try:
+            existing = Estado.query.filter_by(nombre=estado_data['nombre']).first()
+            if not existing:
+                estado = Estado(**estado_data)
+                db.session.add(estado)
+                print(f"Estado creado: {estado_data['nombre']}")
+        except Exception as e:
+            print(f"Error al crear estado {estado_data['nombre']}: {e}")
+            # Continuar con el siguiente estado
+            continue
     
     try:
         db.session.commit()

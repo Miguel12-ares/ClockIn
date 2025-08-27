@@ -1,33 +1,46 @@
 services:
   app:
-    build: ../  # Apunta a la raíz del proyecto donde está Dockerfile
+    build: ../
     ports:
       - "5000:5000"
     environment:
-      - DATABASE_URL=mysql+pymysql://user:pass@db:3306/db_name  # Host 'db', no 'localhost'
-      - FLASK_ENV=production  # Para condicionar create_all
-      - ADMIN_MODE=true  # Habilita acceso administrativo sin autenticación
-      - SECRET_KEY=your-secret-key-here  # Clave secreta para Flask
+      - DATABASE_URL=mysql+pymysql://user:user_password@db:3306/db_name
+      - FLASK_ENV=production
     depends_on:
       db:
-        condition: service_healthy  # Espera a que db esté listo
-    restart: on-failure  # Reinicia si falla (útil para retries)
+        condition: service_healthy
+    restart: on-failure
 
   db:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_ROOT_PASSWORD: rootpass  # Cambia a una segura
       MYSQL_DATABASE: db_name
       MYSQL_USER: user
-      MYSQL_PASSWORD: pass
+      MYSQL_PASSWORD: user_password  # Cambia a una segura
+    ports:
+      - "3307:3306"  # Expuesto para host
     volumes:
       - db_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=rootpass"]
-      interval: 5s  # Chequea cada 5s
+      interval: 5s
       timeout: 3s
-      retries: 10  # Intenta 10 veces
-      start_period: 20s  # Da 20s iniciales para init de MySQL
+      retries: 10
+      start_period: 20s
+
+  phpmyadmin:  # Nuevo servicio
+    image: phpmyadmin/phpmyadmin:latest
+    ports:
+      - "8080:80"  # Accede en http://localhost:8080
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: rootpass  # Usa la de root
+    depends_on:
+      - db
 
 volumes:
   db_data:
