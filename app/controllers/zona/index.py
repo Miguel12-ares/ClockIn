@@ -2,6 +2,7 @@ from flask import jsonify, request
 from app.controllers.zona import zona_bp
 from app.models.zona import Zona
 from app import db
+from sqlalchemy.exc import OperationalError
 
 @zona_bp.route('/', methods=['GET'])
 def index():
@@ -37,7 +38,7 @@ def index():
         for zona in pagination.items:
             zona_data = {
                 'id': zona.id,
-                'sede_nombre': zona.sede_nombre,
+                'nombre': zona.nombre,  # Usar el atributo mapeado
                 'departamento': zona.departamento,
                 'ciudad': zona.ciudad,
                 'users_count': len(zona.users),
@@ -58,6 +59,12 @@ def index():
             }
         }), 200
         
+    except OperationalError as e:
+        return jsonify({
+            'success': False,
+            'error': 'Error de base de datos',
+            'message': 'Error al acceder a la base de datos'
+        }), 500
     except Exception as e:
         return jsonify({
             'success': False,

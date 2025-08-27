@@ -45,10 +45,10 @@ def init_basic_data():
     
     # Crear estados básicos
     estados = [
-        {'nombre': 'Activo', 'description': 'Usuario activo en el sistema'},
-        {'nombre': 'Inactivo', 'description': 'Usuario inactivo temporalmente'},
-        {'nombre': 'Suspendido', 'description': 'Usuario suspendido por violaciones'},
-        {'nombre': 'Retirado', 'description': 'Usuario retirado del sistema'}
+        {'nombre': 'activo', 'description': 'Usuario activo en el sistema'},
+        {'nombre': 'inactivo', 'description': 'Usuario inactivo temporalmente'},
+        {'nombre': 'pendiente', 'description': 'Usuario pendiente de autorización'},
+        {'nombre': 'eliminado', 'description': 'Usuario eliminado del sistema'}
     ]
     
     for estado_data in estados:

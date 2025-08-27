@@ -44,6 +44,27 @@
         </form>
     </div>
 
+    <!-- Error Message -->
+    {% if error_message %}
+    <div class="px-6 py-4 bg-red-50 border-b border-red-200">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">
+                    Error al cargar usuarios
+                </h3>
+                <div class="mt-2 text-sm text-red-700">
+                    {{ error_message }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Users Table -->
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
@@ -70,6 +91,7 @@
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
+                {% if users and users.items %}
                 {% for user in users.items %}
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -157,19 +179,24 @@
                         </div>
                     </td>
                 </tr>
+                {% endfor %}
                 {% else %}
                 <tr>
                     <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                        No se encontraron usuarios
+                        {% if error_message %}
+                            Error al cargar usuarios
+                        {% else %}
+                            No se encontraron usuarios
+                        {% endif %}
                     </td>
                 </tr>
-                {% endfor %}
+                {% endif %}
             </tbody>
         </table>
     </div>
 
     <!-- Pagination -->
-    {% if users.pages > 1 %}
+    {% if users and users.pages > 1 %}
     <div class="px-6 py-4 border-t border-gray-200">
         <div class="flex items-center justify-between">
             <div class="text-sm text-gray-700">

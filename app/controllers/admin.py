@@ -6,7 +6,7 @@ from app.models.zona import Zona
 from app.models.estado import Estado
 from app.models.admin_zona import AdminZona
 from app.models.system_audit import SystemAudit
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 import json
 from datetime import datetime
 
@@ -38,7 +38,7 @@ def users_index():
         per_page = 10
         search = request.args.get('search', '')
         
-        query = User.query
+        query = User.query.options(db.joinedload(User.zona), db.joinedload(User.user_type), db.joinedload(User.estado))
         
         if search:
             query = query.filter(
@@ -54,9 +54,12 @@ def users_index():
         )
         
         return render_template('admin/users.html', users=users, search=search)
+    except OperationalError as e:
+        flash('Error de base de datos al cargar usuarios', 'error')
+        return render_template('admin/users.html', users=None, search=search, error_message="Error de base de datos")
     except Exception as e:
         flash(f'Error al cargar usuarios: {str(e)}', 'error')
-        return redirect('/')
+        return render_template('admin/users.html', users=None, search=search, error_message=str(e))
 
 @admin_bp.route('/users/create', methods=['GET', 'POST'])
 @admin_required
@@ -314,7 +317,7 @@ def dashboard():
             user_types = UserType.query.all()
             user_types_stats = [(ut.type_name, 0) for ut in user_types]
         
-        # Estadísticas por zona (simplificado para evitar errores de JOIN)
+        # Estadísticas por zona usando ORM
         zonas_stats = []
         try:
             zonas_stats = db.session.query(
@@ -333,8 +336,18 @@ def dashboard():
                              inactive_users=inactive_users,
                              user_types_stats=user_types_stats,
                              zonas_stats=zonas_stats)
+    except OperationalError as e:
+        # Error de base de datos
+        print(f"Error de base de datos en dashboard: {e}")
+        return render_template('admin/dashboard.html',
+                             total_users=0,
+                             active_users=0,
+                             inactive_users=0,
+                             user_types_stats=[],
+                             zonas_stats=[],
+                             error_message="Error de base de datos al cargar estadísticas")
     except Exception as e:
-        # En lugar de redirigir al index, mostrar un dashboard básico con error
+        # Error general
         print(f"Error en dashboard: {e}")
         return render_template('admin/dashboard.html',
                              total_users=0,

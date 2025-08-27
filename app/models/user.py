@@ -16,6 +16,7 @@ class User(db.Model):
 
     # Relaciones
     user_type = db.relationship('UserType', backref='users', lazy=True)
+    zona = db.relationship('Zona', back_populates='users', lazy=True)
     access_logs = db.relationship('AccessLog', foreign_keys='AccessLog.user_id', backref='user', lazy=True)
     active_sessions = db.relationship('ActiveSession', backref='user', lazy=True)
     anomalies = db.relationship('Anomaly', foreign_keys='Anomaly.user_id', backref='user', lazy=True)
