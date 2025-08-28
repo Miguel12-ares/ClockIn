@@ -156,6 +156,12 @@ def index():
                            placeholder="Ingrese su número de documento">
                 </div>
                 
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" required 
+                           placeholder="Ingrese su contraseña">
+                </div>
+                
                 <button type="submit" class="btn" id="loginBtn">
                     Iniciar Sesión
                 </button>
@@ -172,6 +178,7 @@ def index():
                 e.preventDefault();
                 
                 const idDocumento = document.getElementById('idDocumento').value;
+                const password = document.getElementById('password').value;
                 const loginBtn = document.getElementById('loginBtn');
                 const messageDiv = document.getElementById('message');
                 
@@ -186,7 +193,10 @@ def index():
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ idDocumento: idDocumento })
+                        body: JSON.stringify({ 
+                            idDocumento: idDocumento,
+                            password: password 
+                        })
                     });
                     
                     const data = await response.json();
@@ -246,8 +256,8 @@ from app.controllers.auth import bp as auth_bp
 from app.controllers.admin import admin_bp
 
 app.register_blueprint(user_bp, url_prefix='/users')
-app.register_blueprint(zona_bp, url_prefix='/zonas')
-app.register_blueprint(user_type_bp, url_prefix='/user_types')
+app.register_blueprint(zona_bp, url_prefix='/api/zonas')
+app.register_blueprint(user_type_bp, url_prefix='/api/user_types')
 app.register_blueprint(estado_bp, url_prefix='/estados')
 app.register_blueprint(admin_zona_bp, url_prefix='/admin_zona')
 app.register_blueprint(access_log_bp, url_prefix='/access_logs')

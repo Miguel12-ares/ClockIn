@@ -22,9 +22,14 @@ class Config:
     
     # Configuración JWT
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt_secret_key_change_in_production')
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)  # Access token expira en 1 hora
-    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)  # Refresh token expira en 30 días
-    JWT_TOKEN_LOCATION = ['headers']
-    JWT_HEADER_NAME = 'Authorization'
-    JWT_HEADER_TYPE = 'Bearer'
+    JWT_ALGORITHM = 'HS256'
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=60)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+    JWT_DECODE_LEEWAY = 5
+    JWT_TOKEN_LOCATION = ['cookies']
+    JWT_COOKIE_SECURE = True  # Cambia a False solo en desarrollo local
+    JWT_COOKIE_SAMESITE = 'Lax'
+    JWT_COOKIE_CSRF_PROTECT = True
+    JWT_CSRF_IN_COOKIES = True
+    JWT_CSRF_HEADER_NAME = 'X-CSRF-TOKEN'
     JWT_ERROR_MESSAGE_KEY = 'message'

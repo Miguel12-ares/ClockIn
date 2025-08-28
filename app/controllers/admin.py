@@ -357,3 +357,175 @@ def dashboard():
                              user_types_stats=[],
                              zonas_stats=[],
                              error_message=f"Error al cargar estadísticas: {str(e)}")
+
+# -------------------- Zonas (Web) --------------------
+
+@admin_bp.route('/zonas', methods=['GET'])
+@admin_required
+def zonas_index():
+    """Lista y gestiona zonas (vista HTML)"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+
+        query = Zona.query.options(
+            db.selectinload(Zona.users),
+            db.selectinload(Zona.admins)
+        ).order_by(Zona.nombre)
+
+        zonas_page = query.paginate(page=page, per_page=per_page, error_out=False)
+
+        return render_template('admin/zonas.html', zonas=zonas_page)
+    except Exception as e:
+        flash(f'Error al cargar zonas: {str(e)}', 'error')
+        return render_template('admin/zonas.html', zonas=None, error_message=str(e))
+
+
+@admin_bp.route('/zonas', methods=['POST'])
+@admin_required
+def zonas_create():
+    """Crear zona (form HTML). Devuelve redirect con flash."""
+    try:
+        nombre = request.form.get('nombre', '').strip()
+        departamento = request.form.get('departamento', '').strip()
+        ciudad = request.form.get('ciudad', '').strip()
+        if not nombre:
+            flash('El nombre de la zona es requerido', 'error')
+            return redirect(url_for('admin.zonas_index'))
+
+        nueva = Zona(nombre=nombre, departamento=departamento or None, ciudad=ciudad or None)
+        db.session.add(nueva)
+        db.session.commit()
+
+        log_audit(None, 'zonas', 'CREATE', old_values=None, new_values={'nombre': nombre, 'departamento': departamento, 'ciudad': ciudad})
+        flash('Zona creada exitosamente', 'success')
+        return redirect(url_for('admin.zonas_index'))
+    except IntegrityError:
+        db.session.rollback()
+        flash('No se pudo crear la zona (duplicado u otro error de integridad)', 'error')
+        return redirect(url_for('admin.zonas_index'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al crear zona: {str(e)}', 'error')
+        return redirect(url_for('admin.zonas_index'))
+
+
+@admin_bp.route('/zonas/<int:zona_id>', methods=['PUT', 'PATCH'])
+@admin_required
+def zonas_update(zona_id):
+    """Editar zona (AJAX JSON). Devuelve JSON."""
+    try:
+        zona = Zona.query.get_or_404(zona_id)
+        payload = request.get_json(silent=True) or {}
+        old_values = {'nombre': zona.nombre, 'departamento': zona.departamento, 'ciudad': zona.ciudad}
+
+        zona.nombre = (payload.get('nombre') or zona.nombre).strip()
+        zona.departamento = (payload.get('departamento') or zona.departamento)
+        zona.ciudad = (payload.get('ciudad') or zona.ciudad)
+
+        db.session.commit()
+
+        log_audit(None, 'zonas', 'UPDATE', old_values=old_values, new_values={'nombre': zona.nombre, 'departamento': zona.departamento, 'ciudad': zona.ciudad})
+        return jsonify({'success': True, 'message': 'Zona actualizada', 'data': {'id': zona.id}}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+
+@admin_bp.route('/zonas/<int:zona_id>', methods=['DELETE'])
+@admin_required
+def zonas_delete(zona_id):
+    """Eliminar zona (AJAX JSON). Devuelve JSON."""
+    try:
+        zona = Zona.query.get_or_404(zona_id)
+        old_values = {'nombre': zona.nombre, 'departamento': zona.departamento, 'ciudad': zona.ciudad}
+        db.session.delete(zona)
+        db.session.commit()
+        log_audit(None, 'zonas', 'DELETE', old_values=old_values, new_values=None)
+        return jsonify({'success': True, 'message': 'Zona eliminada'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+
+# -------------------- Tipos de Usuario (Web) --------------------
+
+@admin_bp.route('/user_types', methods=['GET'])
+@admin_required
+def user_types_index():
+    """Lista y gestiona tipos de usuario (vista HTML)"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+
+        query = UserType.query.order_by(UserType.type_name)
+        types_page = query.paginate(page=page, per_page=per_page, error_out=False)
+
+        return render_template('admin/user_types.html', user_types=types_page)
+    except Exception as e:
+        flash(f'Error al cargar tipos de usuario: {str(e)}', 'error')
+        return render_template('admin/user_types.html', user_types=None, error_message=str(e))
+
+
+@admin_bp.route('/user_types', methods=['POST'])
+@admin_required
+def user_types_create():
+    """Crear tipo de usuario (form HTML)."""
+    try:
+        type_name = request.form.get('type_name', '').strip()
+        description = request.form.get('description', '').strip()
+        if not type_name:
+            flash('El nombre del tipo es requerido', 'error')
+            return redirect(url_for('admin.user_types_index'))
+
+        nuevo = UserType(type_name=type_name, description=description or None)
+        db.session.add(nuevo)
+        db.session.commit()
+
+        log_audit(None, 'user_types', 'CREATE', old_values=None, new_values={'type_name': type_name, 'description': description})
+        flash('Tipo de usuario creado exitosamente', 'success')
+        return redirect(url_for('admin.user_types_index'))
+    except IntegrityError:
+        db.session.rollback()
+        flash('No se pudo crear el tipo (duplicado u otro error de integridad)', 'error')
+        return redirect(url_for('admin.user_types_index'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al crear tipo: {str(e)}', 'error')
+        return redirect(url_for('admin.user_types_index'))
+
+
+@admin_bp.route('/user_types/<int:type_id>', methods=['PUT', 'PATCH'])
+@admin_required
+def user_types_update(type_id):
+    """Editar tipo (AJAX JSON)."""
+    try:
+        ut = UserType.query.get_or_404(type_id)
+        payload = request.get_json(silent=True) or {}
+        old_values = {'type_name': ut.type_name, 'description': ut.description}
+
+        ut.type_name = (payload.get('type_name') or ut.type_name).strip()
+        ut.description = payload.get('description') or ut.description
+        db.session.commit()
+
+        log_audit(None, 'user_types', 'UPDATE', old_values=old_values, new_values={'type_name': ut.type_name, 'description': ut.description})
+        return jsonify({'success': True, 'message': 'Tipo actualizado', 'data': {'id': ut.id}}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+
+@admin_bp.route('/user_types/<int:type_id>', methods=['DELETE'])
+@admin_required
+def user_types_delete(type_id):
+    """Eliminar tipo (AJAX JSON)."""
+    try:
+        ut = UserType.query.get_or_404(type_id)
+        old_values = {'type_name': ut.type_name, 'description': ut.description}
+        db.session.delete(ut)
+        db.session.commit()
+        log_audit(None, 'user_types', 'DELETE', old_values=old_values, new_values=None)
+        return jsonify({'success': True, 'message': 'Tipo eliminado'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400

@@ -2,7 +2,8 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import (
     create_access_token, create_refresh_token, 
     jwt_required, get_jwt_identity, get_jwt,
-    verify_jwt_in_request
+    verify_jwt_in_request,
+    set_access_cookies, set_refresh_cookies
 )
 from app.models.user import User
 from app.models.user_type import UserType
@@ -17,27 +18,27 @@ bp = Blueprint('auth', __name__)
 @bp.route('/login', methods=['POST'])
 def login():
     """
-    Endpoint de autenticación por ID de documento
-    
+    Endpoint de autenticación por ID de documento y contraseña
+
     Body esperado:
     {
-        "idDocumento": "12345678"
+        "idDocumento": "12345678",
+        "password": "contraseña123"
     }
-    
-    Respuesta exitosa:
+
+    Respuesta exitosa (tokens en cookies, no en JSON):
     {
         "success": true,
         "message": "Autenticación exitosa",
         "data": {
-            "access_token": "...",
-            "refresh_token": "...",
             "user": {
                 "id": 1,
                 "idDocumento": "12345678",
                 "full_name": "Juan Pérez",
                 "user_type": "Admin",
                 "zona_id": 1
-            }
+            },
+            "session_id": 123
         }
     }
     """
@@ -57,6 +58,14 @@ def login():
                 'success': False,
                 'error': 'ID documento requerido',
                 'message': 'Se requiere el número de identificación para autenticarse'
+            }), 400
+        
+        # Validar que la contraseña esté presente
+        if 'password' not in data or not data['password']:
+            return jsonify({
+                'success': False,
+                'error': 'Contraseña requerida',
+                'message': 'Se requiere la contraseña para autenticarse'
             }), 400
         
         # Buscar usuario por ID documento
@@ -80,6 +89,24 @@ def login():
                 'message': 'No existe un usuario registrado con ese número de identificación'
             }), 401
         
+        # Verificar contraseña
+        if not user.check_password(data['password']):
+            # Registrar intento de acceso con contraseña incorrecta
+            access_log = AccessLog(
+                user_id=user.id,
+                action_type='LOGIN_FAILED',
+                status='CONTRASEÑA_INCORRECTA',
+                notes=f'Intento de login con contraseña incorrecta: {id_documento}'
+            )
+            db.session.add(access_log)
+            db.session.commit()
+            
+            return jsonify({
+                'success': False,
+                'error': 'Credenciales incorrectas',
+                'message': 'El número de identificación o la contraseña son incorrectos'
+            }), 401
+        
         # Verificar si el usuario está activo
         if not user.is_active:
             # Registrar intento de acceso con usuario inactivo
@@ -98,9 +125,9 @@ def login():
                 'message': 'Su cuenta se encuentra desactivada. Contacte al administrador.'
             }), 401
         
-        # Verificar que el estado del usuario sea "activo"
-        estado_activo = Estado.query.filter_by(name='activo').first()
-        if user.estado_id != estado_activo.id:
+        # Verificar que el estado del usuario sea "Activo"
+        estado_activo = Estado.query.filter_by(nombre='Activo').first()
+        if not estado_activo or user.estado_id != estado_activo.id:
             # Registrar intento de acceso con estado incorrecto
             access_log = AccessLog(
                 user_id=user.id,
@@ -117,9 +144,9 @@ def login():
                 'message': 'Su cuenta no está en estado activo. Contacte al administrador.'
             }), 401
         
-        # Crear tokens JWT
+        # Crear tokens JWT (identity como string para 'sub')
         access_token = create_access_token(
-            identity=user.id,
+            identity=str(user.id),
             additional_claims={
                 'id_documento': user.idDocumento,
                 'user_type': user.user_type.type_name,
@@ -127,9 +154,8 @@ def login():
                 'is_active': user.is_active
             }
         )
-        
         refresh_token = create_refresh_token(
-            identity=user.id,
+            identity=str(user.id),
             additional_claims={
                 'id_documento': user.idDocumento,
                 'user_type': user.user_type.type_name,
@@ -167,12 +193,10 @@ def login():
         
         db.session.commit()
         
-        return jsonify({
+        response = jsonify({
             'success': True,
             'message': 'Autenticación exitosa',
             'data': {
-                'access_token': access_token,
-                'refresh_token': refresh_token,
                 'user': {
                     'id': user.id,
                     'idDocumento': user.idDocumento,
@@ -182,10 +206,14 @@ def login():
                 },
                 'session_id': new_session.id
             }
-        }), 200
+        })
+        set_access_cookies(response, access_token)
+        set_refresh_cookies(response, refresh_token)
+        return response, 200
         
     except Exception as e:
         db.session.rollback()
+        print(f"Error en login: {str(e)}")  # Para debugging
         return jsonify({
             'success': False,
             'error': 'Error interno del servidor',
@@ -224,9 +252,9 @@ def refresh():
                 'message': 'Usuario no encontrado o inactivo'
             }), 401
         
-        # Verificar que el estado del usuario sea "activo"
-        estado_activo = Estado.query.filter_by(name='activo').first()
-        if user.estado_id != estado_activo.id:
+        # Verificar que el estado del usuario sea "Activo"
+        estado_activo = Estado.query.filter_by(nombre='Activo').first()
+        if not estado_activo or user.estado_id != estado_activo.id:
             return jsonify({
                 'success': False,
                 'error': 'Estado de usuario incorrecto',
@@ -365,7 +393,6 @@ def get_current_user():
                 'full_name': f"{user.first_name} {user.last_name}",
                 'user_type': user.user_type.type_name,
                 'zona_id': user.zona_id,
-                'zona_nombre': user.zona.sede_nombre if user.zona else None,
                 'is_active': user.is_active,
                 'estado_id': user.estado_id
             }

@@ -1,0 +1,176 @@
+{% extends 'admin/base.html' %}
+{% block title %}Zonas - Admin{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h2 class="text-2xl font-semibold text-gray-800">Zonas</h2>
+  <button id="openCreateZona" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Nueva Zona</button>
+</div>
+
+<!-- Table -->
+<div class="bg-white shadow rounded-lg overflow-hidden">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Departamento</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuarios</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admins</th>
+        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+      </tr>
+    </thead>
+    <tbody class="bg-white divide-y divide-gray-200">
+      {% if zonas and zonas.items %}
+        {% for z in zonas.items %}
+        <tr data-id="{{ z.id }}">
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ z.nombre }}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ z.departamento or '-' }}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ z.ciudad or '-' }}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ z.users|length }}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ z.admins|length }}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+            <button class="editZona text-indigo-600 hover:text-indigo-900">Editar</button>
+            <button class="deleteZona text-red-600 hover:text-red-800">Eliminar</button>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">No hay zonas registradas</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+{% if zonas %}
+<div class="mt-4 flex justify-between items-center">
+  <div class="text-sm text-gray-600">Página {{ zonas.page }} de {{ zonas.pages }} ({{ zonas.total }} total)</div>
+  <div class="space-x-2">
+    {% if zonas.has_prev %}
+      <a class="px-3 py-1 border rounded" href="?page={{ zonas.prev_num }}">Anterior</a>
+    {% endif %}
+    {% if zonas.has_next %}
+      <a class="px-3 py-1 border rounded" href="?page={{ zonas.next_num }}">Siguiente</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Create/Edit Modal -->
+<div id="zonaModal" class="fixed inset-0 bg-black bg-opacity-30 hidden items-center justify-center">
+  <div class="bg-white w-full max-w-md rounded-lg shadow p-6">
+    <h3 id="zonaModalTitle" class="text-lg font-semibold mb-4">Nueva Zona</h3>
+    <form id="zonaForm" class="space-y-4">
+      <input type="hidden" id="zonaId" />
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Nombre</label>
+        <input id="zonaNombre" class="mt-1 block w-full border rounded px-3 py-2" required />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Departamento</label>
+        <input id="zonaDepartamento" class="mt-1 block w-full border rounded px-3 py-2" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Ciudad</label>
+        <input id="zonaCiudad" class="mt-1 block w-full border rounded px-3 py-2" />
+      </div>
+      <div class="flex justify-end space-x-2 pt-2">
+        <button type="button" id="cancelZona" class="px-4 py-2 border rounded">Cancelar</button>
+        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function getCookie(name){
+  return document.cookie.split('; ').find(row => row.startsWith(name + '='))?.split('=')[1];
+}
+
+const modal = document.getElementById('zonaModal');
+const openBtn = document.getElementById('openCreateZona');
+const cancelBtn = document.getElementById('cancelZona');
+const form = document.getElementById('zonaForm');
+const title = document.getElementById('zonaModalTitle');
+
+openBtn.addEventListener('click', () => {
+  title.textContent = 'Nueva Zona';
+  document.getElementById('zonaId').value = '';
+  document.getElementById('zonaNombre').value = '';
+  document.getElementById('zonaDepartamento').value = '';
+  document.getElementById('zonaCiudad').value = '';
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+});
+
+cancelBtn.addEventListener('click', () => {
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+});
+
+// Handle edit clicks
+Array.from(document.getElementsByClassName('editZona')).forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const tr = e.target.closest('tr');
+    const id = tr.getAttribute('data-id');
+    const tds = tr.querySelectorAll('td');
+    title.textContent = 'Editar Zona';
+    document.getElementById('zonaId').value = id;
+    document.getElementById('zonaNombre').value = tds[0].textContent.trim();
+    document.getElementById('zonaDepartamento').value = tds[1].textContent.trim() === '-' ? '' : tds[1].textContent.trim();
+    document.getElementById('zonaCiudad').value = tds[2].textContent.trim() === '-' ? '' : tds[2].textContent.trim();
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  });
+});
+
+// Handle delete clicks
+Array.from(document.getElementsByClassName('deleteZona')).forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    const tr = e.target.closest('tr');
+    const id = tr.getAttribute('data-id');
+    if(!confirm('¿Eliminar esta zona?')) return;
+    const csrf = getCookie('csrf_access_token');
+    const res = await fetch(`/admin/zonas/${id}`, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrf }});
+    const data = await res.json();
+    if(data.success){ location.reload(); } else { alert(data.message || 'Error al eliminar'); }
+  });
+});
+
+// Handle form submit (create or update)
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('zonaId').value;
+  const nombre = document.getElementById('zonaNombre').value.trim();
+  const departamento = document.getElementById('zonaDepartamento').value.trim();
+  const ciudad = document.getElementById('zonaCiudad').value.trim();
+  const csrf = getCookie('csrf_access_token');
+
+  if(id){
+    // update via JSON
+    const res = await fetch(`/admin/zonas/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+      body: JSON.stringify({ nombre, departamento, ciudad })
+    });
+    const data = await res.json();
+    if(data.success){ location.reload(); } else { alert(data.message || 'Error al actualizar'); }
+  } else {
+    // create via form-urlencoded to reuse server-side handling
+    const fd = new FormData();
+    fd.append('nombre', nombre);
+    fd.append('departamento', departamento);
+    fd.append('ciudad', ciudad);
+    const res = await fetch('/admin/zonas', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf }, body: fd });
+    if(res.redirected){ window.location.href = res.url; return; }
+    // fallback
+    location.reload();
+  }
+});
+</script>
+{% endblock %}

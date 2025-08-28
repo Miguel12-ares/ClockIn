@@ -1,0 +1,156 @@
+{% extends 'admin/base.html' %}
+{% block title %}Tipos de Usuario - Admin{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h2 class="text-2xl font-semibold text-gray-800">Tipos de Usuario</h2>
+  <button id="openCreateType" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Nuevo Tipo</button>
+</div>
+
+<div class="bg-white shadow rounded-lg overflow-hidden">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuarios</th>
+        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+      </tr>
+    </thead>
+    <tbody class="bg-white divide-y divide-gray-200">
+      {% if user_types and user_types.items %}
+        {% for t in user_types.items %}
+        <tr data-id="{{ t.id }}">
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ t.type_name }}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ t.description or '-' }}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ t.users|length }}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+            <button class="editType text-indigo-600 hover:text-indigo-900">Editar</button>
+            <button class="deleteType text-red-600 hover:text-red-800">Eliminar</button>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">No hay tipos registrados</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+{% if user_types %}
+<div class="mt-4 flex justify-between items-center">
+  <div class="text-sm text-gray-600">Página {{ user_types.page }} de {{ user_types.pages }} ({{ user_types.total }} total)</div>
+  <div class="space-x-2">
+    {% if user_types.has_prev %}
+      <a class="px-3 py-1 border rounded" href="?page={{ user_types.prev_num }}">Anterior</a>
+    {% endif %}
+    {% if user_types.has_next %}
+      <a class="px-3 py-1 border rounded" href="?page={{ user_types.next_num }}">Siguiente</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Modal -->
+<div id="typeModal" class="fixed inset-0 bg-black bg-opacity-30 hidden items-center justify-center">
+  <div class="bg-white w-full max-w-md rounded-lg shadow p-6">
+    <h3 id="typeModalTitle" class="text-lg font-semibold mb-4">Nuevo Tipo</h3>
+    <form id="typeForm" class="space-y-4">
+      <input type="hidden" id="typeId" />
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Nombre</label>
+        <input id="typeName" class="mt-1 block w-full border rounded px-3 py-2" required />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Descripción</label>
+        <input id="typeDescription" class="mt-1 block w-full border rounded px-3 py-2" />
+      </div>
+      <div class="flex justify-end space-x-2 pt-2">
+        <button type="button" id="cancelType" class="px-4 py-2 border rounded">Cancelar</button>
+        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function getCookie(name){
+  return document.cookie.split('; ').find(row => row.startsWith(name + '='))?.split('=')[1];
+}
+
+const modal = document.getElementById('typeModal');
+const openBtn = document.getElementById('openCreateType');
+const cancelBtn = document.getElementById('cancelType');
+const form = document.getElementById('typeForm');
+const title = document.getElementById('typeModalTitle');
+
+openBtn.addEventListener('click', () => {
+  title.textContent = 'Nuevo Tipo';
+  document.getElementById('typeId').value = '';
+  document.getElementById('typeName').value = '';
+  document.getElementById('typeDescription').value = '';
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+});
+
+cancelBtn.addEventListener('click', () => {
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+});
+
+Array.from(document.getElementsByClassName('editType')).forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const tr = e.target.closest('tr');
+    const id = tr.getAttribute('data-id');
+    const tds = tr.querySelectorAll('td');
+    title.textContent = 'Editar Tipo';
+    document.getElementById('typeId').value = id;
+    document.getElementById('typeName').value = tds[0].textContent.trim();
+    document.getElementById('typeDescription').value = tds[1].textContent.trim() === '-' ? '' : tds[1].textContent.trim();
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  });
+});
+
+Array.from(document.getElementsByClassName('deleteType')).forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    const tr = e.target.closest('tr');
+    const id = tr.getAttribute('data-id');
+    if(!confirm('¿Eliminar este tipo?')) return;
+    const csrf = getCookie('csrf_access_token');
+    const res = await fetch(`/admin/user_types/${id}`, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrf }});
+    const data = await res.json();
+    if(data.success){ location.reload(); } else { alert(data.message || 'Error al eliminar'); }
+  });
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('typeId').value;
+  const type_name = document.getElementById('typeName').value.trim();
+  const description = document.getElementById('typeDescription').value.trim();
+  const csrf = getCookie('csrf_access_token');
+
+  if(id){
+    const res = await fetch(`/admin/user_types/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+      body: JSON.stringify({ type_name, description })
+    });
+    const data = await res.json();
+    if(data.success){ location.reload(); } else { alert(data.message || 'Error al actualizar'); }
+  } else {
+    const fd = new FormData();
+    fd.append('type_name', type_name);
+    fd.append('description', description);
+    const res = await fetch('/admin/user_types', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf }, body: fd });
+    if(res.redirected){ window.location.href = res.url; return; }
+    location.reload();
+  }
+});
+</script>
+{% endblock %}

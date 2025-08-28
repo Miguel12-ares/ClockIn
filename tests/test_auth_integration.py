@@ -1,6 +1,5 @@
 import pytest
 import json
-from app import create_app, db
 from app.models.user import User
 from app.models.user_type import UserType
 from app.models.zona import Zona
@@ -9,26 +8,7 @@ from app.models.estado import Estado
 class TestAuthIntegration:
     """Pruebas de integración para el sistema de autenticación JWT"""
     
-    @pytest.fixture
-    def app(self):
-        """Crear aplicación de prueba"""
-        app = create_app()
-        app.config['TESTING'] = True
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-        app.config['JWT_SECRET_KEY'] = 'test_secret_key'
-        
-        with app.app_context():
-            db.create_all()
-            self._create_test_data()
-            yield app
-            db.drop_all()
-    
-    @pytest.fixture
-    def client(self, app):
-        """Cliente de prueba"""
-        return app.test_client()
-    
-    def _create_test_data(self):
+    def _create_test_data(self, db):
         """Crear datos de prueba"""
         # Crear estados
         estado_activo = Estado(name='activo', description='Usuario activo')
@@ -92,8 +72,10 @@ class TestAuthIntegration:
         db.session.add_all([admin_user, supervisor_user, empleado_user, user_inactivo])
         db.session.commit()
     
-    def test_login_success_admin(self, client):
+    def test_login_success_admin(self, client, db):
         """Prueba login exitoso con usuario administrador"""
+        self._create_test_data(db)
+        
         response = client.post('/auth/login', 
                              json={'idDocumento': '12345678'})
         
@@ -105,8 +87,10 @@ class TestAuthIntegration:
         assert 'refresh_token' in data['data']
         assert data['data']['user']['user_type'] == 'Admin'
     
-    def test_login_success_supervisor(self, client):
+    def test_login_success_supervisor(self, client, db):
         """Prueba login exitoso con usuario supervisor"""
+        self._create_test_data(db)
+        
         response = client.post('/auth/login', 
                              json={'idDocumento': '87654321'})
         
@@ -116,8 +100,10 @@ class TestAuthIntegration:
         assert data['success'] is True
         assert data['data']['user']['user_type'] == 'Supervisor'
     
-    def test_login_user_not_found(self, client):
+    def test_login_user_not_found(self, client, db):
         """Prueba login con usuario inexistente"""
+        self._create_test_data(db)
+        
         response = client.post('/auth/login', 
                              json={'idDocumento': '99999999'})
         
@@ -127,8 +113,10 @@ class TestAuthIntegration:
         assert data['success'] is False
         assert 'Usuario no encontrado' in data['message']
     
-    def test_login_user_inactive(self, client):
+    def test_login_user_inactive(self, client, db):
         """Prueba login con usuario inactivo"""
+        self._create_test_data(db)
+        
         response = client.post('/auth/login', 
                              json={'idDocumento': '22222222'})
         
@@ -138,8 +126,10 @@ class TestAuthIntegration:
         assert data['success'] is False
         assert 'Estado de usuario incorrecto' in data['message']
     
-    def test_login_missing_data(self, client):
+    def test_login_missing_data(self, client, db):
         """Prueba login sin datos requeridos"""
+        self._create_test_data(db)
+        
         response = client.post('/auth/login', 
                              json={})
         
@@ -149,8 +139,10 @@ class TestAuthIntegration:
         assert data['success'] is False
         assert 'ID documento requerido' in data['message']
     
-    def test_refresh_token_success(self, client):
+    def test_refresh_token_success(self, client, db):
         """Prueba renovación exitosa de token"""
+        self._create_test_data(db)
+        
         # Primero hacer login
         login_response = client.post('/auth/login', 
                                    json={'idDocumento': '12345678'})
@@ -167,15 +159,19 @@ class TestAuthIntegration:
         assert data['success'] is True
         assert 'access_token' in data['data']
     
-    def test_refresh_token_invalid(self, client):
+    def test_refresh_token_invalid(self, client, db):
         """Prueba renovación con token inválido"""
+        self._create_test_data(db)
+        
         response = client.post('/auth/refresh',
                              headers={'Authorization': 'Bearer invalid_token'})
         
         assert response.status_code == 401
     
-    def test_access_protected_route_admin(self, client):
+    def test_access_protected_route_admin(self, client, db):
         """Prueba acceso a ruta protegida con usuario admin"""
+        self._create_test_data(db)
+        
         # Login
         login_response = client.post('/auth/login', 
                                    json={'idDocumento': '12345678'})
@@ -188,8 +184,10 @@ class TestAuthIntegration:
         
         assert response.status_code == 200
     
-    def test_access_protected_route_supervisor_denied(self, client):
+    def test_access_protected_route_supervisor_denied(self, client, db):
         """Prueba acceso denegado a ruta admin con usuario supervisor"""
+        self._create_test_data(db)
+        
         # Login con supervisor
         login_response = client.post('/auth/login', 
                                    json={'idDocumento': '87654321'})
@@ -205,14 +203,18 @@ class TestAuthIntegration:
         assert data['success'] is False
         assert 'Acceso denegado' in data['error']
     
-    def test_access_protected_route_no_token(self, client):
+    def test_access_protected_route_no_token(self, client, db):
         """Prueba acceso a ruta protegida sin token"""
+        self._create_test_data(db)
+        
         response = client.get('/users/')
         
         assert response.status_code == 401
     
-    def test_verify_token_success(self, client):
+    def test_verify_token_success(self, client, db):
         """Prueba verificación exitosa de token"""
+        self._create_test_data(db)
+        
         # Login
         login_response = client.post('/auth/login', 
                                    json={'idDocumento': '12345678'})
@@ -227,8 +229,10 @@ class TestAuthIntegration:
         data = json.loads(response.data)
         assert data['success'] is True
     
-    def test_logout_success(self, client):
+    def test_logout_success(self, client, db):
         """Prueba logout exitoso"""
+        self._create_test_data(db)
+        
         # Login
         login_response = client.post('/auth/login', 
                                    json={'idDocumento': '12345678'})
@@ -243,8 +247,10 @@ class TestAuthIntegration:
         data = json.loads(response.data)
         assert data['success'] is True
     
-    def test_get_current_user(self, client):
+    def test_get_current_user(self, client, db):
         """Prueba obtención de información del usuario actual"""
+        self._create_test_data(db)
+        
         # Login
         login_response = client.post('/auth/login', 
                                    json={'idDocumento': '12345678'})

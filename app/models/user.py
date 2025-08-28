@@ -1,4 +1,5 @@
 from app import db
+from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -6,6 +7,7 @@ class User(db.Model):
     idDocumento = db.Column(db.Integer, unique=True, nullable=False)  # Ajustado a INT como solicitaste
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
+    password_hash = db.Column(db.String(255), nullable=True)  # Campo para contraseña hasheada
     user_type_id = db.Column(db.Integer, db.ForeignKey('user_types.id'), nullable=False)
     zona_id = db.Column(db.Integer, db.ForeignKey('zonas.id'), nullable=False)
     fingerprint_data = db.Column(db.LargeBinary)
@@ -23,3 +25,13 @@ class User(db.Model):
     anomalies_resolved = db.relationship('Anomaly', backref='resolved_by_user', foreign_keys='Anomaly.resolved_by', lazy=True)
     system_audits = db.relationship('SystemAudit', backref='user', lazy=True)
     admin_zonas = db.relationship('AdminZona', backref='admin', lazy=True)
+
+    def set_password(self, password):
+        """Establecer contraseña hasheada"""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        """Verificar contraseña"""
+        if self.password_hash is None:
+            return False
+        return check_password_hash(self.password_hash, password)

@@ -1,9 +1,11 @@
 from flask import jsonify, request
 from app.controllers.user_type import user_type_bp
 from app.models.user_type import UserType
+from app.middleware.auth_middleware import admin_required
 from app import db
 
 @user_type_bp.route('/', methods=['GET'])
+@admin_required
 def index():
     """
     Lista todos los tipos de usuario
