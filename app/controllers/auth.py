@@ -1,38 +1,18 @@
-from flask import Blueprint, request, jsonify, redirect, url_for, render_template
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import (
+    create_access_token, create_refresh_token, 
+    jwt_required, get_jwt_identity, get_jwt,
+    verify_jwt_in_request
+)
 from app.models.user import User
 from app.models.user_type import UserType
+from app.models.estado import Estado
 from app.models.active_session import ActiveSession
 from app.models.access_log import AccessLog
 from app import db
-import jwt
 import datetime
-import os
 
 bp = Blueprint('auth', __name__)
-
-def generate_jwt_token(user):
-    """Genera un token JWT para el usuario"""
-    payload = {
-        'user_id': user.id,
-        'id_documento': user.idDocumento,
-        'user_type': user.user_type.type_name,
-        'zona_id': user.zona_id,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=8),  # Token válido por 8 horas
-        'iat': datetime.datetime.utcnow()
-    }
-    secret_key = os.getenv('SECRET_KEY', 'default_secret')
-    return jwt.encode(payload, secret_key, algorithm='HS256')
-
-def verify_jwt_token(token):
-    """Verifica y decodifica un token JWT"""
-    try:
-        secret_key = os.getenv('SECRET_KEY', 'default_secret')
-        payload = jwt.decode(token, secret_key, algorithms=['HS256'])
-        return payload
-    except jwt.ExpiredSignatureError:
-        return None
-    except jwt.InvalidTokenError:
-        return None
 
 @bp.route('/login', methods=['POST'])
 def login():
@@ -42,6 +22,23 @@ def login():
     Body esperado:
     {
         "idDocumento": "12345678"
+    }
+    
+    Respuesta exitosa:
+    {
+        "success": true,
+        "message": "Autenticación exitosa",
+        "data": {
+            "access_token": "...",
+            "refresh_token": "...",
+            "user": {
+                "id": 1,
+                "idDocumento": "12345678",
+                "full_name": "Juan Pérez",
+                "user_type": "Admin",
+                "zona_id": 1
+            }
+        }
     }
     """
     try:
@@ -101,8 +98,45 @@ def login():
                 'message': 'Su cuenta se encuentra desactivada. Contacte al administrador.'
             }), 401
         
-        # Generar token JWT
-        token = generate_jwt_token(user)
+        # Verificar que el estado del usuario sea "activo"
+        estado_activo = Estado.query.filter_by(name='activo').first()
+        if user.estado_id != estado_activo.id:
+            # Registrar intento de acceso con estado incorrecto
+            access_log = AccessLog(
+                user_id=user.id,
+                action_type='LOGIN_FAILED',
+                status='ESTADO_INCORRECTO',
+                notes=f'Intento de login con estado incorrecto: {id_documento}'
+            )
+            db.session.add(access_log)
+            db.session.commit()
+            
+            return jsonify({
+                'success': False,
+                'error': 'Estado de usuario incorrecto',
+                'message': 'Su cuenta no está en estado activo. Contacte al administrador.'
+            }), 401
+        
+        # Crear tokens JWT
+        access_token = create_access_token(
+            identity=user.id,
+            additional_claims={
+                'id_documento': user.idDocumento,
+                'user_type': user.user_type.type_name,
+                'zona_id': user.zona_id,
+                'is_active': user.is_active
+            }
+        )
+        
+        refresh_token = create_refresh_token(
+            identity=user.id,
+            additional_claims={
+                'id_documento': user.idDocumento,
+                'user_type': user.user_type.type_name,
+                'zona_id': user.zona_id,
+                'is_active': user.is_active
+            }
+        )
         
         # Verificar si ya tiene una sesión activa
         existing_session = ActiveSession.query.filter_by(
@@ -133,14 +167,12 @@ def login():
         
         db.session.commit()
         
-        # Determinar redirección según rol
-        redirect_url = get_redirect_url_by_role(user.user_type.type_name)
-        
         return jsonify({
             'success': True,
             'message': 'Autenticación exitosa',
             'data': {
-                'token': token,
+                'access_token': access_token,
+                'refresh_token': refresh_token,
                 'user': {
                     'id': user.id,
                     'idDocumento': user.idDocumento,
@@ -148,8 +180,7 @@ def login():
                     'user_type': user.user_type.type_name,
                     'zona_id': user.zona_id
                 },
-                'session_id': new_session.id,
-                'redirect_url': redirect_url
+                'session_id': new_session.id
             }
         }), 200
         
@@ -161,32 +192,82 @@ def login():
             'message': 'Ocurrió un error durante el proceso de autenticación'
         }), 500
 
+@bp.route('/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh():
+    """
+    Endpoint para renovar access token usando refresh token
+    
+    Headers requeridos:
+    Authorization: Bearer <refresh_token>
+    
+    Respuesta exitosa:
+    {
+        "success": true,
+        "message": "Token renovado exitosamente",
+        "data": {
+            "access_token": "..."
+        }
+    }
+    """
+    try:
+        # Obtener identidad del refresh token
+        user_id = get_jwt_identity()
+        claims = get_jwt()
+        
+        # Verificar que el usuario aún existe y está activo
+        user = User.query.get(user_id)
+        if not user or not user.is_active:
+            return jsonify({
+                'success': False,
+                'error': 'Usuario inválido',
+                'message': 'Usuario no encontrado o inactivo'
+            }), 401
+        
+        # Verificar que el estado del usuario sea "activo"
+        estado_activo = Estado.query.filter_by(name='activo').first()
+        if user.estado_id != estado_activo.id:
+            return jsonify({
+                'success': False,
+                'error': 'Estado de usuario incorrecto',
+                'message': 'Su cuenta no está en estado activo'
+            }), 401
+        
+        # Crear nuevo access token
+        access_token = create_access_token(
+            identity=user.id,
+            additional_claims={
+                'id_documento': user.idDocumento,
+                'user_type': user.user_type.type_name,
+                'zona_id': user.zona_id,
+                'is_active': user.is_active
+            }
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Token renovado exitosamente',
+            'data': {
+                'access_token': access_token
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': 'Error interno del servidor',
+            'message': 'Ocurrió un error durante la renovación del token'
+        }), 500
+
 @bp.route('/logout', methods=['POST'])
+@jwt_required()
 def logout():
     """
     Endpoint para cerrar sesión
-    Requiere token JWT en el header Authorization: Bearer <token>
+    Requiere access token en el header Authorization: Bearer <token>
     """
     try:
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({
-                'success': False,
-                'error': 'Token requerido',
-                'message': 'Se requiere token de autenticación'
-            }), 401
-        
-        token = auth_header.split(' ')[1]
-        payload = verify_jwt_token(token)
-        
-        if not payload:
-            return jsonify({
-                'success': False,
-                'error': 'Token inválido',
-                'message': 'Token de autenticación inválido o expirado'
-            }), 401
-        
-        user_id = payload['user_id']
+        user_id = get_jwt_identity()
         
         # Cerrar sesión activa
         active_session = ActiveSession.query.filter_by(
@@ -221,31 +302,17 @@ def logout():
         }), 500
 
 @bp.route('/verify', methods=['GET'])
+@jwt_required()
 def verify_token():
     """
-    Endpoint para verificar si un token JWT es válido
+    Endpoint para verificar si un access token es válido
     """
     try:
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({
-                'success': False,
-                'error': 'Token requerido',
-                'message': 'Se requiere token de autenticación'
-            }), 401
-        
-        token = auth_header.split(' ')[1]
-        payload = verify_jwt_token(token)
-        
-        if not payload:
-            return jsonify({
-                'success': False,
-                'error': 'Token inválido',
-                'message': 'Token de autenticación inválido o expirado'
-            }), 401
+        user_id = get_jwt_identity()
+        claims = get_jwt()
         
         # Verificar que el usuario aún existe y está activo
-        user = User.query.get(payload['user_id'])
+        user = User.query.get(user_id)
         if not user or not user.is_active:
             return jsonify({
                 'success': False,
@@ -257,10 +324,10 @@ def verify_token():
             'success': True,
             'message': 'Token válido',
             'data': {
-                'user_id': payload['user_id'],
-                'id_documento': payload['id_documento'],
-                'user_type': payload['user_type'],
-                'zona_id': payload['zona_id']
+                'user_id': user_id,
+                'id_documento': claims.get('id_documento'),
+                'user_type': claims.get('user_type'),
+                'zona_id': claims.get('zona_id')
             }
         }), 200
         
@@ -271,27 +338,44 @@ def verify_token():
             'message': 'Ocurrió un error durante la verificación del token'
         }), 500
 
-def get_redirect_url_by_role(user_type):
+@bp.route('/me', methods=['GET'])
+@jwt_required()
+def get_current_user():
     """
-    Determina la URL de redirección según el tipo de usuario
+    Endpoint para obtener información del usuario actual
     """
-    role_redirects = {
-        'SAdmin': '/admin/dashboard',
-        'Admin': '/admin/dashboard',
-        'Funcionario SENA': '/funcionario/dashboard',
-        'Instructor': '/instructor/dashboard',
-        'Aprendiz': '/aprendiz/dashboard',
-        'Administrativo': '/administrativo/dashboard',
-        'Ciudadano': '/ciudadano/dashboard'
-    }
-    
-    return role_redirects.get(user_type, '/dashboard')
-
-@bp.route('/login', methods=['GET'])
-def login_form():
-    """
-    Muestra el formulario de login
-    """
-    return render_template('login.html')
+    try:
+        user_id = get_jwt_identity()
+        
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({
+                'success': False,
+                'error': 'Usuario no encontrado',
+                'message': 'El usuario no existe'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'id': user.id,
+                'idDocumento': user.idDocumento,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'full_name': f"{user.first_name} {user.last_name}",
+                'user_type': user.user_type.type_name,
+                'zona_id': user.zona_id,
+                'zona_nombre': user.zona.sede_nombre if user.zona else None,
+                'is_active': user.is_active,
+                'estado_id': user.estado_id
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': 'Error interno del servidor',
+            'message': 'Ocurrió un error al obtener la información del usuario'
+        }), 500
 
 

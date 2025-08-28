@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from app import db, admin_required
+from app import db
+from app.middleware.auth_middleware import admin_required
 from app.models.user import User
 from app.models.user_type import UserType
 from app.models.zona import Zona

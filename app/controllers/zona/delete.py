@@ -1,12 +1,15 @@
 from flask import jsonify, request
 from app.controllers.zona import zona_bp
 from app.models.zona import Zona
+from app.middleware.auth_middleware import admin_required
 from app import db
 
 @zona_bp.route('/<int:zona_id>', methods=['DELETE'])
+@admin_required
 def delete(zona_id):
     """
     Elimina una zona (solo si no tiene usuarios asociados)
+    Requiere rol de administrador
     """
     try:
         zona = Zona.query.get(zona_id)

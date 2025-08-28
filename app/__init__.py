@@ -1,12 +1,14 @@
 from flask import Flask, request, redirect, url_for, flash, render_template_string, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_jwt_extended import JWTManager
 from functools import wraps
 import os
 
 app = Flask(__name__)
 app.config.from_object('app.config.Config')
 db = SQLAlchemy(app)
+jwt = JWTManager(app)
 
 migrate = Migrate(app, db)
 
@@ -31,36 +33,201 @@ def index():
     <html>
     <head>
         <title>ClockIn - Sistema de Control de Acceso</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body { font-family: Arial, sans-serif; margin: 40px; }
-            .container { max-width: 800px; margin: 0 auto; }
-            .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-            .links { display: flex; gap: 20px; flex-wrap: wrap; }
-            .link { background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
-            .link:hover { background: #0056b3; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .container { 
+                background: white; 
+                border-radius: 15px; 
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                padding: 40px;
+                max-width: 500px;
+                width: 90%;
+                text-align: center;
+            }
+            .logo { 
+                font-size: 2.5em; 
+                font-weight: bold; 
+                color: #333;
+                margin-bottom: 10px;
+            }
+            .subtitle { 
+                color: #666; 
+                margin-bottom: 30px;
+                font-size: 1.1em;
+            }
+            .login-form {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+            .form-group {
+                text-align: left;
+            }
+            .form-group label {
+                display: block;
+                margin-bottom: 8px;
+                color: #333;
+                font-weight: 500;
+            }
+            .form-group input {
+                width: 100%;
+                padding: 12px 15px;
+                border: 2px solid #e1e5e9;
+                border-radius: 8px;
+                font-size: 16px;
+                transition: border-color 0.3s;
+            }
+            .form-group input:focus {
+                outline: none;
+                border-color: #667eea;
+            }
+            .btn {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 15px 30px;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: transform 0.2s;
+            }
+            .btn:hover {
+                transform: translateY(-2px);
+            }
+            .btn:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                transform: none;
+            }
+            .message {
+                padding: 10px;
+                border-radius: 5px;
+                margin-bottom: 20px;
+                display: none;
+            }
+            .message.success {
+                background: #d4edda;
+                color: #155724;
+                border: 1px solid #c3e6cb;
+            }
+            .message.error {
+                background: #f8d7da;
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+            }
+            .links {
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid #eee;
+            }
+            .links a {
+                color: #667eea;
+                text-decoration: none;
+                margin: 0 10px;
+                font-weight: 500;
+            }
+            .links a:hover {
+                text-decoration: underline;
+            }
         </style>
     </head>
     <body>
         <div class="container">
-            <div class="header">
-                <h1>ClockIn - Sistema de Control de Acceso</h1>
-                <p>Sistema de gestión de usuarios y control de acceso para empresas</p>
-            </div>
+            <div class="logo">ClockIn</div>
+            <div class="subtitle">Sistema de Control de Acceso</div>
             
-            <h2>Acceso Rápido</h2>
+            <div id="message" class="message"></div>
+            
+            <form class="login-form" id="loginForm">
+                <div class="form-group">
+                    <label for="idDocumento">Número de Documento</label>
+                    <input type="text" id="idDocumento" name="idDocumento" required 
+                           placeholder="Ingrese su número de documento">
+                </div>
+                
+                <button type="submit" class="btn" id="loginBtn">
+                    Iniciar Sesión
+                </button>
+            </form>
+            
             <div class="links">
-                <a href="/admin/dashboard" class="link">Dashboard Administrativo</a>
-                <a href="/admin/users" class="link">Gestión de Usuarios</a>
-                <a href="/user_types" class="link">Tipos de Usuario</a>
-                <a href="/zonas" class="link">Gestión de Zonas</a>
-                <a href="/auth/login" class="link">Acceso de Usuarios</a>
+                <a href="/admin/dashboard">Panel Administrativo</a>
+                <a href="/docs">Documentación</a>
             </div>
-            
-            <h2>Estado del Sistema</h2>
-            <p>Servidor funcionando correctamente</p>
-            <p>Base de datos conectada</p>
-            <p>Panel administrativo disponible</p>
         </div>
+
+        <script>
+            document.getElementById('loginForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const idDocumento = document.getElementById('idDocumento').value;
+                const loginBtn = document.getElementById('loginBtn');
+                const messageDiv = document.getElementById('message');
+                
+                // Deshabilitar botón y mostrar estado de carga
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'Iniciando sesión...';
+                messageDiv.style.display = 'none';
+                
+                try {
+                    const response = await fetch('/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ idDocumento: idDocumento })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Guardar tokens
+                        localStorage.setItem('access_token', data.data.access_token);
+                        localStorage.setItem('refresh_token', data.data.refresh_token);
+                        
+                        // Mostrar mensaje de éxito
+                        messageDiv.className = 'message success';
+                        messageDiv.textContent = 'Inicio de sesión exitoso. Redirigiendo...';
+                        messageDiv.style.display = 'block';
+                        
+                        // Redirigir según el rol
+                        setTimeout(() => {
+                            if (data.data.user.user_type === 'Admin' || data.data.user.user_type === 'SAdmin') {
+                                window.location.href = '/admin/dashboard';
+                            } else {
+                                window.location.href = '/dashboard';
+                            }
+                        }, 1500);
+                        
+                    } else {
+                        // Mostrar error
+                        messageDiv.className = 'message error';
+                        messageDiv.textContent = data.message || 'Error en el inicio de sesión';
+                        messageDiv.style.display = 'block';
+                    }
+                    
+                } catch (error) {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = 'Error de conexión. Intente nuevamente.';
+                    messageDiv.style.display = 'block';
+                } finally {
+                    // Restaurar botón
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Iniciar Sesión';
+                }
+            });
+        </script>
     </body>
     </html>
     ''')

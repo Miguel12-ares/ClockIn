@@ -4,12 +4,15 @@ from app.models.user import User
 from app.models.user_type import UserType
 from app.models.zona import Zona
 from app.models.estado import Estado
+from app.middleware.auth_middleware import admin_required
 from app import db
 
 @user_bp.route('/', methods=['GET'])
+@admin_required
 def index():
     """
     Lista todos los usuarios con información relacionada
+    Requiere rol de administrador
     """
     try:
         # Parámetros de paginación
@@ -21,9 +24,14 @@ def index():
         zona_id = request.args.get('zona_id', type=int)
         estado_id = request.args.get('estado_id', type=int)
         is_active = request.args.get('is_active', type=lambda v: v.lower() == 'true')
+        search = request.args.get('search', '')
         
-        # Construir query base
-        query = User.query
+        # Construir query base con joinedload para evitar N+1
+        query = User.query.options(
+            db.selectinload(User.user_type),
+            db.selectinload(User.zona),
+            db.selectinload(User.estado)
+        )
         
         # Aplicar filtros
         if user_type_id:
@@ -34,6 +42,19 @@ def index():
             query = query.filter(User.estado_id == estado_id)
         if is_active is not None:
             query = query.filter(User.is_active == is_active)
+        
+        # Aplicar búsqueda
+        if search:
+            query = query.filter(
+                db.or_(
+                    User.first_name.ilike(f'%{search}%'),
+                    User.last_name.ilike(f'%{search}%'),
+                    User.idDocumento.ilike(f'%{search}%')
+                )
+            )
+        
+        # Ordenar por nombre
+        query = query.order_by(User.first_name, User.last_name)
         
         # Paginar resultados
         pagination = query.paginate(

@@ -1,15 +1,23 @@
 from flask import jsonify, request
 from app.controllers.zona import zona_bp
 from app.models.zona import Zona
+from app.middleware.auth_middleware import admin_required
 from app import db
+from app.models.user import User
+from app.models.admin_zona import AdminZona
 
 @zona_bp.route('/<int:zona_id>', methods=['GET'])
+@admin_required
 def show(zona_id):
     """
     Obtiene una zona específica por ID con información relacionada
+    Requiere rol de administrador
     """
     try:
-        zona = Zona.query.get(zona_id)
+        zona = Zona.query.options(
+            db.selectinload(Zona.users).selectinload(User.user_type),
+            db.selectinload(Zona.admins).selectinload(AdminZona.admin)
+        ).get(zona_id)
         
         if not zona:
             return jsonify({

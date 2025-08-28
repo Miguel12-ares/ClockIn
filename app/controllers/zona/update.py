@@ -1,12 +1,15 @@
 from flask import jsonify, request
 from app.controllers.zona import zona_bp
 from app.models.zona import Zona
+from app.middleware.auth_middleware import admin_required
 from app import db
 
 @zona_bp.route('/<int:zona_id>', methods=['PUT'])
+@admin_required
 def update(zona_id):
     """
     Actualiza una zona existente
+    Requiere rol de administrador
     """
     try:
         zona = Zona.query.get(zona_id)

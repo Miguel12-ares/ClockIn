@@ -1,12 +1,15 @@
 from flask import jsonify, request
 from app.controllers.zona import zona_bp
 from app.models.zona import Zona
+from app.middleware.auth_middleware import admin_required
 from app import db
 
 @zona_bp.route('/', methods=['POST'])
+@admin_required
 def create():
     """
     Crea una nueva zona
+    Requiere rol de administrador
     """
     try:
         data = request.get_json()

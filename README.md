@@ -1,200 +1,306 @@
-# Sistema de Registro de Entrada y Salida de Personal "ClockIn"
+# ClockIn - Sistema de Control de Acceso
 
-Este es un sistema web para registrar entradas y salidas de personal utilizando identificación por ID único (con futura integración de huellas digitales). Está desarrollado con Python y Flask como backend, MySQL como base de datos, Tailwind CSS para interfaces frontend, y todo dockerizado para facilitar el despliegue y la portabilidad.
+Sistema de gestión de usuarios y control de acceso para empresas, desarrollado con Flask, SQLAlchemy y MySQL.
 
-La arquitectura sigue el patrón MVC (Modelo-Vista-Controlador) con principios SOLID para un código limpio y mantenible. Soporta roles de usuarios como SAdmin, admin, Funcionarios Sena, Instructores, Aprendices, Administrativo y Ciudadano.
+## Características Principales
 
-## 🆕 Nuevas Funcionalidades - Módulo de Administración
+- **Autenticación JWT**: Sistema robusto de autenticación con access y refresh tokens
+- **Autorización por Roles**: Control de acceso basado en roles (RBAC)
+- **Gestión de Usuarios**: CRUD completo con estados y tipos de usuario
+- **Gestión de Zonas**: Administración de sedes y departamentos
+- **Auditoría**: Registro completo de acciones del sistema
+- **API RESTful**: Endpoints JSON para integración con frontend
 
-### ✅ CLOCK-17: Gestión de Usuarios y Roles
-- **CRUD completo de usuarios** con validaciones robustas
-- **Control de acceso basado en roles (RBAC)** con decorador `@admin_required`
-- **Dashboard administrativo** con estadísticas en tiempo real
-- **Sistema de auditoría** que registra todas las operaciones CRUD
-- **Interfaz moderna** con Tailwind CSS y componentes interactivos
-- **Paginación y búsqueda** para manejo eficiente de grandes volúmenes de datos
+## Arquitectura
 
-### 🎯 Acceso al Panel Administrativo
-```
-http://localhost:5000/admin/dashboard    # Dashboard principal
-http://localhost:5000/admin/users        # Gestión de usuarios
-```
+### Tecnologías Utilizadas
 
-### 🔧 Características del Módulo Admin
-- **Sin autenticación en desarrollo** (configurable via `ADMIN_MODE`)
-- **Validaciones de formulario** en frontend y backend
-- **Manejo de errores** con mensajes descriptivos
-- **Transacciones de base de datos** con rollback automático
-- **Responsive design** para dispositivos móviles y desktop
+- **Backend**: Flask 3.0.3
+- **Base de Datos**: MySQL 8.0
+- **ORM**: SQLAlchemy 3.1.1
+- **Autenticación**: Flask-JWT-Extended 4.6.0
+- **Migraciones**: Flask-Migrate 4.0.4
+- **Contenedores**: Docker & Docker Compose
 
-## Requisitos Previos
-Para instalar y correr el proyecto, necesitas:
-- **Docker**: Instala Docker Desktop desde [docker.com](https://www.docker.com/products/docker-desktop) (incluye Docker Compose).
-- **Git**: Para clonar el repositorio (descarga desde [git-scm.com](https://git-scm.com/)).
-- **Node.js y npm** (opcional, solo si modificas frontend localmente): Descarga desde [nodejs.org](https://nodejs.org/) para compilar Tailwind CSS.
-- **Python 3.10+** (opcional, para desarrollo local sin Docker): Pero se recomienda usar Docker para evitar configuraciones locales.
+### Estructura del Proyecto
 
-No se requiere un servidor MySQL local, ya que Docker lo maneja todo.
-
-## Instalación
-Sigue estos pasos para configurar el entorno rápidamente:
-
-1. **Clona el Repositorio**:
-```bash
-git clone https://github.com/Miguel12-ares/ClockIn
-cd ClockIn
-```
-
-2. **Configura Variables de Entorno** (opcional, pero recomendado para personalización):
-- Crea un archivo `.env` en la raíz del proyecto con:
-  ```
-  SECRET_KEY=tu_secreto_aqui  # Clave secreta para Flask
-  DATABASE_URL=mysql+pymysql://user:pass@db:3306/db_name  # Credenciales de DB
-  FLASK_ENV=development  # O 'production' para modo prod
-  ADMIN_MODE=true  # Habilita acceso administrativo sin autenticación
-  ```
-- Nota: En Docker, estas se sobreescriben por las definidas en `docker-compose.yml`.
-
-3. **Instala Dependencias de Frontend** (si modificas Tailwind localmente):
-```bash
-npm install
-npm run build-css
-```
-
-## Cómo Correr el Proyecto con Docker
-El proyecto está completamente dockerizado para un setup fácil y consistente. No necesitas instalar Python o MySQL localmente.
-
-1. **Construye y Ejecuta los Contenedores** (desde la raíz del proyecto):
-```bash
-docker-compose -f Docker/docker-compose.yml up --build
-```
-
-- Esto inicia dos contenedores: `app` (Flask) y `db` (MySQL).
-- La primera vez puede tardar (descarga imágenes y configura DB).
-- Accede a la app en http://localhost:5000.
-- **Panel administrativo**: http://localhost:5000/admin/dashboard
-
-2. **Detener los Contenedores**:
-```bash
-docker-compose -f Docker/docker-compose.yml down
-```
-
-- Agrega `-v` para borrar volúmenes y resetear la DB: `docker-compose -f Docker/docker-compose.yml down -v`.
-
-3. **Modo Desarrollo**:
-- Para hot-reload (cambios automáticos), agrega volúmenes en `docker-compose.yml` bajo `app`:
-  ```yaml
-  volumes:
-    - .:/app
-  ```
-- Reconstruye con `--build` después de cambios en código.
-
-## 🧪 Pruebas del Sistema
-
-### Ejecutar Pruebas Automáticas
-```bash
-python test_admin.py
-```
-
-Este script verifica:
-- ✅ Conexión a la base de datos
-- ✅ Acceso al dashboard administrativo
-- ✅ Funcionalidad CRUD de usuarios
-- ✅ Formularios y validaciones
-- ✅ Sistema de auditoría
-
-### Pruebas Manuales
-1. **Acceder al dashboard**: http://localhost:5000/admin/dashboard
-2. **Crear un usuario**: Navegar a "Nuevo Usuario" y completar formulario
-3. **Editar usuario**: Hacer clic en icono de edición en la lista
-4. **Activar/desactivar**: Usar botón de toggle de estado
-5. **Eliminar usuario**: Usar botón de eliminación (con confirmación)
-
-## Estructura de Carpetas
 ```
 ClockIn/
 ├── app/
-│   ├── controllers/
-│   │   └── admin.py              # 🆕 Controlador de administración
-│   ├── models/                   # Modelos de base de datos
-│   ├── templates/
-│   │   └── admin/               # 🆕 Plantillas del panel admin
-│   │       ├── base.html
-│   │       ├── dashboard.html
-│   │       ├── users.html
-│   │       └── user_form.html
-│   ├── __init__.py              # Configuración Flask + RBAC
-│   └── init_data.py             # 🆕 Inicialización de datos
-├── Docker/                      # Configuración Docker
-├── docs/                        # Documentación
-├── static/                      # CSS/JS compilados
-├── test_admin.py               # 🆕 Script de pruebas
-└── run.py                      # Punto de entrada
+│   ├── controllers/          # Controladores de la aplicación
+│   │   ├── auth.py          # Autenticación JWT
+│   │   ├── admin.py         # Panel administrativo
+│   │   ├── user/            # Gestión de usuarios
+│   │   ├── zona/            # Gestión de zonas
+│   │   └── ...
+│   ├── models/              # Modelos de datos
+│   ├── middleware/          # Middleware de autorización
+│   ├── templates/           # Plantillas HTML
+│   └── static/              # Archivos estáticos
+├── db/                      # Scripts de base de datos
+├── tests/                   # Pruebas de integración
+├── docs/                    # Documentación técnica
+└── Docker/                  # Configuración Docker
 ```
 
-## 📚 Documentación
+## Modelos de Datos
 
-### Módulo de Administración
-- [Documentación completa del módulo admin](docs/controllers/admin/README.md)
-- [Guía de uso y configuración](docs/controllers/admin/README.md#uso)
-- [API y endpoints disponibles](docs/controllers/admin/README.md#rutas-disponibles)
+### Usuario (User)
+- `idDocumento`: Identificación única del usuario
+- `first_name`, `last_name`: Nombre completo
+- `user_type_id`: Relación con tipo de usuario
+- `zona_id`: Zona asignada
+- `estado_id`: Estado del usuario (activo/inactivo)
+- `is_active`: Flag de activación
 
-### Otros Módulos
-- [Gestión de usuarios](docs/controllers/user/README.md)
-- [Gestión de zonas](docs/controllers/zona/README.md)
-- [Tipos de usuario](docs/controllers/user_type/README.md)
+### Tipo de Usuario (UserType)
+- `type_name`: Nombre del rol (Admin, Supervisor, Empleado)
+- `description`: Descripción del rol
 
-## Uso
+### Zona
+- `sede_nombre`: Nombre de la sede
+- `departamento`: Departamento
+- `ciudad`: Ciudad
 
-### Panel Administrativo
-- **Dashboard**: Estadísticas generales del sistema
-- **Gestión de Usuarios**: CRUD completo con búsqueda y filtros
-- **Asignación de Roles**: Configurar tipos de usuario y permisos
-- **Auditoría**: Ver historial de cambios en el sistema
+### Estado
+- `name`: Nombre del estado (activo, inactivo, pendiente, eliminado)
 
-### Funcionalidades Principales
-- **Registro por ID**: Accede a /login e ingresa un ID único
-- **Dashboards**: Dependiendo del rol, verás historiales y reportes
-- **Gestión de Personal**: Panel administrativo completo
-- **Expansión**: Futura integración de huellas con pyfingerprint
+## Rutas y Endpoints
 
-## 🔒 Seguridad
+### Autenticación (`/auth`)
 
-### En Desarrollo
-- Acceso directo al panel administrativo
-- Modo administrador habilitado por defecto
-- Validaciones de formulario en frontend y backend
+| Método | Endpoint | Descripción | Autenticación |
+|--------|----------|-------------|---------------|
+| POST | `/auth/login` | Iniciar sesión | No |
+| POST | `/auth/refresh` | Renovar access token | Refresh token |
+| POST | `/auth/logout` | Cerrar sesión | Access token |
+| GET | `/auth/verify` | Verificar token | Access token |
+| GET | `/auth/me` | Información del usuario actual | Access token |
 
-### En Producción
-- Integrar con sistema de autenticación real
-- Configurar `ADMIN_MODE=false`
-- Implementar sesiones seguras
-- Validar permisos de usuario autenticado
+### Gestión de Usuarios (`/users`)
 
-## Contribuyendo
-1. Forkea el repositorio
-2. Crea una branch: `git checkout -b feature/nueva-funcionalidad`
-3. Commit tus cambios: `git commit -m 'Agrega nueva funcionalidad'`
-4. Push: `git push origin feature/nueva-funcionalidad`
-5. Abre un Pull Request
+| Método | Endpoint | Descripción | Roles Requeridos |
+|--------|----------|-------------|------------------|
+| GET | `/users/` | Listar usuarios | Admin, SAdmin |
+| POST | `/users/` | Crear usuario | Admin, SAdmin |
+| GET | `/users/<id>` | Ver usuario | Admin, SAdmin |
+| PUT | `/users/<id>` | Actualizar usuario | Admin, SAdmin |
+| DELETE | `/users/<id>` | Eliminar usuario | Admin, SAdmin |
 
-### Guías de Contribución
-- Sigue los principios SOLID
-- Escribe tests con pytest
-- Actualiza documentación
-- Valida compatibilidad con Docker
-- Prueba en entorno de desarrollo
+### Gestión de Zonas (`/zonas`)
 
-## 🐛 Reportar Problemas
+| Método | Endpoint | Descripción | Roles Requeridos |
+|--------|----------|-------------|------------------|
+| GET | `/zonas/` | Listar zonas | Admin, SAdmin |
+| POST | `/zonas/` | Crear zona | Admin, SAdmin |
+| GET | `/zonas/<id>` | Ver zona | Admin, SAdmin |
+| PUT | `/zonas/<id>` | Actualizar zona | Admin, SAdmin |
+| DELETE | `/zonas/<id>` | Eliminar zona | Admin, SAdmin |
 
-Para reportar bugs o solicitar funcionalidades:
-- Crear issue en el repositorio
-- Incluir logs de error
-- Describir pasos para reproducir
-- Especificar versión del sistema
-- Adjuntar capturas de pantalla si es relevante
+### Panel Administrativo (`/admin`)
+
+| Método | Endpoint | Descripción | Roles Requeridos |
+|--------|----------|-------------|------------------|
+| GET | `/admin/dashboard` | Dashboard principal | Admin, SAdmin |
+| GET | `/admin/users` | Gestión de usuarios | Admin, SAdmin |
+
+## Autenticación y Autorización
+
+### Sistema JWT
+
+El sistema utiliza Flask-JWT-Extended para manejar la autenticación:
+
+- **Access Token**: Válido por 1 hora, usado para acceder a recursos
+- **Refresh Token**: Válido por 30 días, usado para renovar access tokens
+- **Fresh Token**: Token recién emitido, requerido para acciones sensibles
+
+### Decoradores de Autorización
+
+```python
+from app.middleware.auth_middleware import roles_required, admin_required
+
+@roles_required('Admin', 'SAdmin')
+def admin_only_function():
+    pass
+
+@admin_required
+def admin_function():
+    pass
+```
+
+### Verificaciones de Seguridad
+
+1. **Usuario Activo**: Verifica `is_active = True`
+2. **Estado Correcto**: Verifica `estado.name = 'activo'`
+3. **Rol Autorizado**: Verifica `user_type.type_name` en lista de roles permitidos
+4. **Token Válido**: Verifica firma y expiración del JWT
+
+## Configuración
+
+### Variables de Entorno
+
+```bash
+# Base de datos
+DATABASE_URL=mysql+pymysql://user:password@host:port/database
+
+# JWT
+JWT_SECRET_KEY=your_jwt_secret_key_here
+SECRET_KEY=your_flask_secret_key_here
+
+# Aplicación
+ADMIN_MODE=true
+INIT_DB_ON_START=true
+```
+
+### Configuración JWT
+
+```python
+JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+JWT_TOKEN_LOCATION = ['headers']
+JWT_HEADER_NAME = 'Authorization'
+JWT_HEADER_TYPE = 'Bearer'
+```
+
+## Despliegue Local
+
+### Prerrequisitos
+
+- Python 3.8+
+- MySQL 8.0+
+- Docker (opcional)
+
+### Instalación con Docker
+
+1. **Clonar repositorio**
+   ```bash
+   git clone <repository-url>
+   cd ClockIn
+   ```
+
+2. **Configurar variables de entorno**
+   ```bash
+   cp .env.example .env
+   # Editar .env con tus configuraciones
+   ```
+
+3. **Ejecutar con Docker Compose**
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Inicializar base de datos**
+   ```bash
+   docker-compose exec app python init_db.py
+   ```
+
+### Instalación Manual
+
+1. **Crear entorno virtual**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Linux/Mac
+   # o
+   venv\Scripts\activate     # Windows
+   ```
+
+2. **Instalar dependencias**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Configurar base de datos**
+   ```bash
+   # Crear base de datos MySQL
+   mysql -u root -p
+   CREATE DATABASE clockin;
+   CREATE USER 'clockin_user'@'localhost' IDENTIFIED BY 'password';
+   GRANT ALL PRIVILEGES ON clockin.* TO 'clockin_user'@'localhost';
+   FLUSH PRIVILEGES;
+   ```
+
+4. **Ejecutar migraciones**
+   ```bash
+   flask db upgrade
+   python init_db.py
+   ```
+
+5. **Ejecutar aplicación**
+   ```bash
+   python run.py
+   ```
+
+## Pruebas
+
+### Ejecutar Pruebas de Integración
+
+```bash
+# Instalar pytest
+pip install pytest
+
+# Ejecutar pruebas
+pytest tests/test_auth_integration.py -v
+```
+
+### Casos de Prueba Cubiertos
+
+- ✅ Login exitoso con diferentes roles
+- ✅ Login con usuario inexistente
+- ✅ Login con usuario inactivo
+- ✅ Renovación de tokens
+- ✅ Acceso a rutas protegidas
+- ✅ Denegación de acceso por rol
+- ✅ Verificación de tokens
+- ✅ Logout exitoso
+
+## Checklist de QA
+
+### Funcionalidad de Autenticación
+- [ ] Login exitoso con ID de documento
+- [ ] Validación de usuario activo
+- [ ] Validación de estado correcto
+- [ ] Emisión de access y refresh tokens
+- [ ] Renovación de tokens
+- [ ] Logout y limpieza de sesiones
+
+### Autorización y Seguridad
+- [ ] Protección de rutas administrativas
+- [ ] Verificación de roles por endpoint
+- [ ] Denegación de acceso para roles no autorizados
+- [ ] Validación de tokens en cada request
+- [ ] Manejo de tokens expirados
+
+### Gestión de Datos
+- [ ] CRUD completo de usuarios
+- [ ] CRUD completo de zonas
+- [ ] Paginación en listados
+- [ ] Filtros y búsqueda
+- [ ] Optimización de consultas (evitar N+1)
+
+### API y Respuestas
+- [ ] Respuestas JSON consistentes
+- [ ] Códigos de estado HTTP apropiados
+- [ ] Manejo de errores estructurado
+- [ ] Documentación de endpoints
+
+### Rendimiento
+- [ ] Consultas optimizadas con joinedload/selectinload
+- [ ] Paginación implementada
+- [ ] Índices de base de datos apropiados
+- [ ] Tiempo de respuesta aceptable
+
+## Contribución
+
+1. Fork el proyecto
+2. Crear rama feature (`git checkout -b feature/AmazingFeature`)
+3. Commit cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abrir Pull Request
 
 ## Licencia
-Este proyecto está bajo la licencia MIT. Ver [LICENSE](LICENSE) para detalles.
 
-Si encuentras problemas, abre un issue o contacta al maintainer.
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+
+## Soporte
+
+Para soporte técnico o preguntas sobre el proyecto, contactar al equipo de desarrollo.

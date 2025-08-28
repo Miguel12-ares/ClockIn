@@ -1,13 +1,16 @@
 from flask import jsonify, request
 from app.controllers.zona import zona_bp
 from app.models.zona import Zona
+from app.middleware.auth_middleware import admin_required
 from app import db
 from sqlalchemy.exc import OperationalError
 
 @zona_bp.route('/', methods=['GET'])
+@admin_required
 def index():
     """
     Lista todas las zonas con información relacionada
+    Requiere rol de administrador
     """
     try:
         # Parámetros de paginación
@@ -18,14 +21,20 @@ def index():
         ciudad = request.args.get('ciudad')
         departamento = request.args.get('departamento')
         
-        # Construir query base
-        query = Zona.query
+        # Construir query base con joinedload para evitar N+1
+        query = Zona.query.options(
+            db.selectinload(Zona.users),
+            db.selectinload(Zona.admins)
+        )
         
         # Aplicar filtros
         if ciudad:
             query = query.filter(Zona.ciudad.ilike(f'%{ciudad}%'))
         if departamento:
             query = query.filter(Zona.departamento.ilike(f'%{departamento}%'))
+        
+        # Ordenar por nombre
+        query = query.order_by(Zona.nombre)
         
         # Paginar resultados
         pagination = query.paginate(
