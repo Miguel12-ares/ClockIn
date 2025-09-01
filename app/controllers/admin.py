@@ -4,20 +4,13 @@ from app.models.user_type import UserType
 from app.models.zona import Zona
 from app.models.estado import Estado
 from app.models.system_audit import SystemAudit
+from app.models.active_session import ActiveSession
 from app import db
 from functools import wraps
 from sqlalchemy import cast, String
+from app.utils.decorators import admin_required
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
-
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_type' not in session or session['user_type'] != 'admin':
-            flash('Acceso denegado. Se requieren permisos de administrador.', 'error')
-            return redirect(url_for('main.dashboard'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 @admin_bp.route('/usuarios')
 @admin_required
@@ -170,3 +163,55 @@ def auditoria():
         page=page, per_page=20, error_out=False
     )
     return render_template('admin/auditoria.html', audits=audits)
+
+
+@admin_bp.route('/registrar-entrada', methods=['GET', 'POST'])
+@admin_required
+def registrar_entrada():
+    if request.method == 'POST':
+        user_id = request.form.get('user_id', type=int)
+        if not user_id:
+            flash('Selecciona un usuario válido', 'error')
+            return redirect(request.url)
+        # Import local para evitar referencias circulares
+        from app.controllers.attendance import checkin_logic
+        ok, result = checkin_logic(user_id, created_by_admin_id=session.get('user_id'))
+        if ok:
+            flash('Entrada registrada correctamente', 'success')
+            return redirect(url_for('admin.registrar_entrada'))
+        else:
+            flash(result, 'error')
+            return redirect(request.url)
+
+    # GET: usuarios activos sin sesión activa
+    subq = db.session.query(ActiveSession.user_id).filter(ActiveSession.exit_time.is_(None)).subquery()
+    usuarios = User.query.filter(
+        User.is_active.is_(True),
+        User.estado_id.isnot(None),
+        ~User.id.in_(subq)
+    ).order_by(User.first_name.asc()).all()
+    return render_template('admin/registrar_entrada.html', usuarios=usuarios)
+
+
+@admin_bp.route('/registrar-salida', methods=['GET', 'POST'])
+@admin_required
+def registrar_salida():
+    if request.method == 'POST':
+        user_id = request.form.get('user_id', type=int)
+        if not user_id:
+            flash('Selecciona un usuario válido', 'error')
+            return redirect(request.url)
+        # Import local para evitar referencias circulares
+        from app.controllers.attendance import checkout_logic
+        ok, result = checkout_logic(user_id, created_by_admin_id=session.get('user_id'))
+        if ok:
+            flash('Salida registrada correctamente', 'success')
+            return redirect(url_for('admin.registrar_salida'))
+        else:
+            flash(result, 'error')
+            return redirect(request.url)
+
+    # GET: usuarios con sesión activa
+    activos = db.session.query(User).join(ActiveSession, ActiveSession.user_id == User.id).\
+        filter(ActiveSession.exit_time.is_(None)).order_by(User.first_name.asc()).all()
+    return render_template('admin/registrar_salida.html', usuarios=activos)

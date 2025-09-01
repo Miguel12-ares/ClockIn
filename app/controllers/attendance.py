@@ -6,7 +6,7 @@ from app.models.user import User
 from app.models.access_log import AccessLog
 from app.models.active_session import ActiveSession
 from app.models.system_audit import SystemAudit
-from app.controllers.admin import admin_required
+from app.utils.decorators import admin_required
 
 attendance_bp = Blueprint('attendance', __name__)
 
@@ -31,6 +31,84 @@ def _now_utc():
     return datetime.now(timezone.utc)
 
 
+def checkin_logic(user_id: int, created_by_admin_id: int | None = None):
+    user = User.query.get(user_id)
+    if not user:
+        return False, 'Usuario no encontrado'
+    if not user.is_active or user.estado_id is None:
+        return False, 'Usuario inactivo'
+
+    active = ActiveSession.query.filter_by(user_id=user.id).filter(ActiveSession.exit_time.is_(None)).first()
+    if active:
+        return False, 'Ya hay una entrada activa (sin salida)'
+
+    now = _now_utc()
+    entry_log = AccessLog(
+        user_id=user.id,
+        action_type='ENTRY',
+        timestamp=now,
+        ip_address=_get_client_ip(),
+        status='success',
+        notes='Check-in manual' if created_by_admin_id else 'Check-in por documento',
+        created_by=created_by_admin_id or session.get('user_id')
+    )
+    db.session.add(entry_log)
+
+    session_row = ActiveSession(user_id=user.id, entry_time=now, status='active')
+    db.session.add(session_row)
+
+    audit = SystemAudit(
+        user_id=created_by_admin_id or session.get('user_id', user.id),
+        table_affected='active_sessions',
+        action_type='CREATE',
+        new_values=f'ENTRY user_id={user.id} at {now.isoformat()}',
+        ip_address=_get_client_ip()
+    )
+    db.session.add(audit)
+    db.session.commit()
+    return True, now
+
+
+def checkout_logic(user_id: int, created_by_admin_id: int | None = None):
+    user = User.query.get(user_id)
+    if not user:
+        return False, 'Usuario no encontrado'
+    if not user.is_active or user.estado_id is None:
+        return False, 'Usuario inactivo'
+
+    active = ActiveSession.query.filter_by(user_id=user.id).filter(ActiveSession.exit_time.is_(None)).first()
+    if not active:
+        return False, 'No existe una entrada activa'
+
+    now = _now_utc()
+    active.exit_time = now
+    active.status = 'closed'
+
+    exit_log = AccessLog(
+        user_id=user.id,
+        action_type='EXIT',
+        timestamp=now,
+        ip_address=_get_client_ip(),
+        status='success',
+        notes='Check-out manual' if created_by_admin_id else 'Check-out por documento',
+        created_by=created_by_admin_id or session.get('user_id')
+    )
+    db.session.add(exit_log)
+
+    audit = SystemAudit(
+        user_id=created_by_admin_id or session.get('user_id', user.id),
+        table_affected='active_sessions',
+        action_type='UPDATE',
+        old_values=f'ENTRY {active.entry_time.isoformat()}',
+        new_values=f'EXIT {now.isoformat()}',
+        ip_address=_get_client_ip()
+    )
+    db.session.add(audit)
+
+    db.session.commit()
+    return True, now
+
+
 # API endpoints
 @attendance_bp.route('/attendance/checkin', methods=['POST'])
 def checkin():
@@ -45,44 +123,10 @@ def checkin():
     if not user.is_active or user.estado_id is None:
         return jsonify(success=False, error='Usuario inactivo'), 403
 
-    # Verificar si hay sesión activa
-    active = ActiveSession.query.filter_by(user_id=user.id).filter(ActiveSession.exit_time.is_(None)).first()
-    if active:
-        return jsonify(success=False, error='Ya hay una entrada activa (sin salida)'), 409
-
-    now = _now_utc()
-
-    # Crear AccessLog ENTRY
-    entry_log = AccessLog(
-        user_id=user.id,
-        action_type='ENTRY',
-        timestamp=now,
-        ip_address=_get_client_ip(),
-        status='success',
-        notes='Check-in por documento',
-        created_by=session.get('user_id')
-    )
-    db.session.add(entry_log)
-
-    # Crear ActiveSession
-    session_row = ActiveSession(
-        user_id=user.id,
-        entry_time=now,
-        status='active'
-    )
-    db.session.add(session_row)
-
-    # Auditoría
-    audit = SystemAudit(
-        user_id=session.get('user_id', user.id),
-        table_affected='active_sessions',
-        action_type='CREATE',
-        new_values=f'ENTRY user_id={user.id} at {now.isoformat()}',
-        ip_address=_get_client_ip()
-    )
-    db.session.add(audit)
-
-    db.session.commit()
+    ok, result = checkin_logic(user.id)
+    if not ok:
+        return jsonify(success=False, error=result), 409 if 'activa' in result else 400
+    now = result
     return jsonify(success=True, message='Check-in registrado', user_id=user.id, entry_time=now.isoformat())
 
 
@@ -99,39 +143,10 @@ def checkout():
     if not user.is_active or user.estado_id is None:
         return jsonify(success=False, error='Usuario inactivo'), 403
 
-    # Buscar sesión activa
-    active = ActiveSession.query.filter_by(user_id=user.id).filter(ActiveSession.exit_time.is_(None)).first()
-    if not active:
-        return jsonify(success=False, error='No existe una entrada activa'), 409
-
-    now = _now_utc()
-    active.exit_time = now
-    active.status = 'closed'
-
-    # AccessLog EXIT
-    exit_log = AccessLog(
-        user_id=user.id,
-        action_type='EXIT',
-        timestamp=now,
-        ip_address=_get_client_ip(),
-        status='success',
-        notes='Check-out por documento',
-        created_by=session.get('user_id')
-    )
-    db.session.add(exit_log)
-
-    # Auditoría
-    audit = SystemAudit(
-        user_id=session.get('user_id', user.id),
-        table_affected='active_sessions',
-        action_type='UPDATE',
-        old_values=f'ENTRY {active.entry_time.isoformat()}',
-        new_values=f'EXIT {now.isoformat()}',
-        ip_address=_get_client_ip()
-    )
-    db.session.add(audit)
-
-    db.session.commit()
+    ok, result = checkout_logic(user.id)
+    if not ok:
+        return jsonify(success=False, error=result), 409 if 'activa' in result else 400
+    now = result
     return jsonify(success=True, message='Check-out registrado', user_id=user.id, exit_time=now.isoformat())
 
 

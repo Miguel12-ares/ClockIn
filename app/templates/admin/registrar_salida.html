@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Registrar Salida{% endblock %}
+{% block content %}
+<h3 class="mb-3"><i class="fas fa-sign-out-alt me-2"></i>Registrar Salida</h3>
+<form method="post" class="card">
+  <div class="card-body">
+    <div class="mb-3">
+      <label for="user_id" class="form-label">Usuario</label>
+      <select id="user_id" name="user_id" class="form-select" required>
+        <option value="">Selecciona un usuario...</option>
+        {% for u in usuarios %}
+          <option value="{{ u.id }}">{{ u.idDocumento }} - {{ u.first_name }} {{ u.last_name }}</option>
+        {% endfor %}
+      </select>
+      <div class="form-text">Solo se listan usuarios con sesión activa.</div>
+    </div>
+  </div>
+  <div class="card-footer d-flex gap-2">
+    <a href="{{ url_for('admin.usuarios') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Volver</a>
+    <button type="submit" class="btn btn-warning"><i class="fas fa-check me-1"></i>Registrar Salida</button>
+  </div>
+</form>
+
+<!-- Select2 (CDN) -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+  $(function(){
+    $('#user_id').select2({ width: '100%', placeholder: 'Selecciona un usuario' });
+  });
+</script>
+{% endblock %}
