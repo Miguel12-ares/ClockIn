@@ -166,18 +166,18 @@ FLASK_DEBUG: 1
 #### API Endpoints para Registro de Asistencia
 
 **Registrar Entrada:**
----
+
 curl -X POST http://localhost:5000/attendance/checkin
 -H "Content-Type: application/json"
 -d '{"idDocumento": "12345678"}'
----
+
 
 **Registrar Salida:**
----
+
 curl -X POST http://localhost:5000/attendance/checkout
 -H "Content-Type: application/json"
 -d '{"idDocumento": "12345678"}'
----
+
 
 ## 🔌 API Endpoints
 
@@ -211,13 +211,17 @@ curl -X POST http://localhost:5000/attendance/checkout
 | GET | `/admin/auditoria` | Ver logs de auditoría |
 
 ## 📁 Estructura del Proyecto
+
 ClockIn/
+
 ├── app/
+|
 │ ├── controllers/ # Controladores Flask
 │ │ ├── admin.py # Gestión administrativa
 │ │ ├── attendance.py # Control de asistencia
 │ │ ├── auth.py # Autenticación
 │ │ └── main.py # Rutas principales
+| |
 │ ├── models/ # Modelos de base de datos
 │ │ ├── access_log.py # Logs de acceso
 │ │ ├── active_session.py # Sesiones activas
@@ -228,19 +232,22 @@ ClockIn/
 │ │ ├── user.py # Usuarios
 │ │ ├── user_type.py # Tipos de usuario
 │ │ └── zona.py # Zonas/Sedes
+| |
 │ ├── templates/ # Plantillas HTML
 │ │ ├── admin/ # Vistas administrativas
 │ │ └── auth/ # Vistas de autenticación
+| |
 │ ├── utils/ # Utilidades
 │ │ ├── decorators.py # Decoradores personalizados
 │ │ └── init_data.py # Datos iniciales
 │ └── init.py # Inicialización de la app
-├── Docker/
-│ └── docker-compose.yml # Configuración Docker
-├── dockerfile # Imagen de la aplicación
+| |
+├── Docker/ # Configuración Docker
+│ └── docker-compose.yml # Configuración Docker Compose
+├── dockerfile # Imagen Docker de la app
 ├── requirements.txt # Dependencias Python
-├── run.py # Punto de entrada
-└── debug_db.py # Utilidad de debugging
+├── run.py # Punto de entrada de la app
+└── debug_db.py # Utilidad de depuración
 
 
 ## 📸 Capturas de Pantalla
