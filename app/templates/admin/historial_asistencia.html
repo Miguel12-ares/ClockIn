@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Historial de Asistencia{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Historial de Asistencia</h3>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-sm-3">
+    <input type="text" name="search" value="{{ search or '' }}" class="form-control" placeholder="Documento o nombre">
+  </div>
+  <div class="col-sm-2">
+    <input type="datetime-local" name="start" value="{{ start or '' }}" class="form-control" placeholder="Inicio">
+  </div>
+  <div class="col-sm-2">
+    <input type="datetime-local" name="end" value="{{ end or '' }}" class="form-control" placeholder="Fin">
+  </div>
+  <div class="col-sm-2">
+    <select name="tipo" class="form-select">
+      <option value="">Ambos</option>
+      <option value="ENTRY" {{ 'selected' if tipo=='ENTRY' else '' }}>Entradas</option>
+      <option value="EXIT" {{ 'selected' if tipo=='EXIT' else '' }}>Salidas</option>
+    </select>
+  </div>
+  <div class="col-sm-3">
+    <button class="btn btn-primary" type="submit"><i class="fas fa-search me-1"></i>Filtrar</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('attendance.historial_asistencia') }}">Limpiar</a>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Fecha/Hora</th>
+        <th>Tipo</th>
+        <th>Documento</th>
+        <th>Nombre</th>
+        <th>IP</th>
+        <th>Notas</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log, user in pagination.items %}
+      <tr>
+        <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp }}</td>
+        <td>
+          {% if log.action_type == 'ENTRY' %}
+            <span class="badge bg-success">Entrada</span>
+          {% elif log.action_type == 'EXIT' %}
+            <span class="badge bg-danger">Salida</span>
+          {% else %}
+            <span class="badge bg-secondary">{{ log.action_type }}</span>
+          {% endif %}
+        </td>
+        <td>{{ user.idDocumento }}</td>
+        <td>{{ user.first_name }} {{ user.last_name }}</td>
+        <td>{{ log.ip_address or '' }}</td>
+        <td>{{ log.notes or '' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-center text-muted">Sin registros</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<nav aria-label="Paginación">
+  <ul class="pagination">
+    {% if pagination.has_prev %}
+      <li class="page-item"><a class="page-link" href="{{ url_for('attendance.historial_asistencia', page=pagination.prev_num, search=search, start=start, end=end, tipo=tipo) }}">&laquo;</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+    {% endif %}
+
+    <li class="page-item disabled"><span class="page-link">Página {{ pagination.page }} de {{ pagination.pages or 1 }}</span></li>
+
+    {% if pagination.has_next %}
+      <li class="page-item"><a class="page-link" href="{{ url_for('attendance.historial_asistencia', page=pagination.next_num, search=search, start=start, end=end, tipo=tipo) }}">&raquo;</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endblock %}

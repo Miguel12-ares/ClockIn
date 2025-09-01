@@ -21,6 +21,18 @@
                     </a>
                 </div>
                 <div class="col-md-4 mb-3">
+                    <a href="{{ url_for('attendance.sesiones_activas') }}" class="btn btn-outline-warning w-100">
+                        <i class="fas fa-user-clock"></i><br>
+                        Sesiones Activas
+                    </a>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <a href="{{ url_for('attendance.historial_asistencia') }}" class="btn btn-outline-success w-100">
+                        <i class="fas fa-clipboard-list"></i><br>
+                        Historial Asistencia
+                    </a>
+                </div>
+                <div class="col-md-4 mb-3">
                     <a href="#" class="btn btn-outline-secondary w-100">
                         <i class="fas fa-chart-bar"></i><br>
                         Reportes (Próximamente)
@@ -30,6 +42,6 @@
         </div>
     </div>
 {% else %}
-    <div class="alert alert-info">Bienvenido. Próximamente verás tu panel de asistencias aquí.</div>
+    <div class="alert alert-info">Bienvenido. Registro disponible próximamente.</div>
 {% endif %}
 {% endblock %}

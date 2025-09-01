@@ -6,6 +6,8 @@ from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 import threading
+import time
+from sqlalchemy import text
 
 # Create unbound DB instance (bound inside create_app)
 db = SQLAlchemy()
@@ -46,19 +48,36 @@ def create_app():
         print(f"📋 Modelos detectados: {list(db.Model.metadata.tables.keys())}")
 
         with _db_lock:
-            try:
-                print("🔄 Iniciando creación de tablas...")
-                db.create_all()
-                print("✅ Tablas creadas exitosamente")
-                init_default_data()
+            max_retries = 10
+            for attempt in range(max_retries):
                 try:
-                    from app.utils.init_data import create_initial_data
-                    create_initial_data()
-                    print("✅ Datos iniciales creados")
-                except Exception as se:
-                    print(f"Seed data error: {se}")
-            except Exception as e:
-                print(f"❌ Database setup error (may be normal in multi-worker): {e}")
+                    print(f"🔄 Intento {attempt + 1}/{max_retries} - probando conexión MySQL...")
+                    # Verificar conexión
+                    db.session.execute(text("SELECT 1"))
+                    print("✅ MySQL conectado exitosamente")
+
+                    # Crear tablas
+                    print("🔄 Creando tablas...")
+                    db.create_all()
+                    print("✅ Tablas creadas exitosamente")
+
+                    # Seeds seguros
+                    init_default_data()
+                    try:
+                        from app.utils.init_data import create_initial_data
+                        create_initial_data()
+                        print("✅ Datos iniciales creados")
+                    except Exception as se:
+                        print(f"Seed data error: {se}")
+
+                    break
+                except Exception as e:
+                    print(f"❌ Intento {attempt + 1} falló: {e}")
+                    if attempt < max_retries - 1:
+                        print("⏱️ Esperando 3s antes de reintentar...")
+                        time.sleep(3)
+                    else:
+                        print("❌ FALLO CRÍTICO: No se pudo conectar a MySQL para crear tablas y sembrar datos")
 
     # Registrar blueprints
     from app.controllers.user import user_bp
@@ -73,6 +92,7 @@ def create_app():
     from app.controllers.auth import auth_bp
     from app.controllers.main import main_bp
     from app.controllers.admin import admin_bp
+    from app.controllers.attendance import attendance_bp
 
     app.register_blueprint(user_bp, url_prefix='/users')
     app.register_blueprint(zona_bp, url_prefix='/zonas')
@@ -86,6 +106,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(attendance_bp)
 
     return app
 

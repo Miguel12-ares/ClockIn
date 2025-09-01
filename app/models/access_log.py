@@ -7,6 +7,7 @@ class AccessLog(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     action_type = db.Column(db.String(100))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(45))
     fingerprint_confidence = db.Column(db.Numeric(5, 4))
     status = db.Column(db.String(50))
     notes = db.Column(db.Text)
