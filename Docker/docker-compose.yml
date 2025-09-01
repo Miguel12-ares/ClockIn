@@ -5,11 +5,14 @@ services:
       - "5000:5000"
     environment:
       - DATABASE_URL=mysql+pymysql://user:user_password@db:3306/db_name
-      - FLASK_ENV=production
+      - FLASK_DEBUG=1
+      - PYTHONUNBUFFERED=1
     depends_on:
       db:
         condition: service_healthy
     restart: on-failure
+    volumes:
+      - ../:/app
 
   db:
     image: mysql:8.0
@@ -26,8 +29,8 @@ services:
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=rootpass"]
       interval: 5s
-      timeout: 3s
-      retries: 10
+      timeout: 5s
+      retries: 20
       start_period: 20s
 
   phpmyadmin:

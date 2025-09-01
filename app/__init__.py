@@ -32,6 +32,7 @@ def create_app():
     # Cargar modelos y crear tablas con lock (evitar DDL concurrente en multi-worker)
     with app.app_context():
         # CRÍTICO: importar todos los modelos ANTES de create_all()
+        print("🔍 IMPORTANDO TODOS LOS MODELOS...")
         from app.models import user_type  # noqa: F401
         from app.models import zona       # noqa: F401
         from app.models import estado     # noqa: F401
@@ -42,7 +43,7 @@ def create_app():
         from app.models import anomaly    # noqa: F401
         from app.models import system_audit  # noqa: F401
 
-        print(f"🔍 SQLAlchemy Metadata tables (pre-create): {list(db.Model.metadata.tables.keys())}")
+        print(f"📋 Modelos detectados: {list(db.Model.metadata.tables.keys())}")
 
         with _db_lock:
             try:
@@ -71,6 +72,7 @@ def create_app():
     from app.controllers.system_audit import system_audit_bp
     from app.controllers.auth import auth_bp
     from app.controllers.main import main_bp
+    from app.controllers.admin import admin_bp
 
     app.register_blueprint(user_bp, url_prefix='/users')
     app.register_blueprint(zona_bp, url_prefix='/zonas')
@@ -83,6 +85,7 @@ def create_app():
     app.register_blueprint(system_audit_bp, url_prefix='/system_audits')
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
+    app.register_blueprint(admin_bp)
 
     return app
 

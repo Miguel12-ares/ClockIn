@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Auditoría del Sistema{% endblock %}
+
+{% block content %}
+<h2>Auditoría del Sistema</h2>
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped table-hover">
+        <thead>
+          <tr>
+            <th>Fecha/Hora</th>
+            <th>Usuario</th>
+            <th>Tabla</th>
+            <th>Acción</th>
+            <th>Valores Anteriores</th>
+            <th>Valores Nuevos</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in audits.items %}
+          <tr>
+            <td>{{ a.timestamp.strftime('%Y-%m-%d %H:%M:%S') if a.timestamp }}</td>
+            <td>{% if a.user %}{{ a.user.first_name }} {{ a.user.last_name }}{% else %}-{% endif %}</td>
+            <td>{{ a.table_affected }}</td>
+            <td><span class="badge bg-secondary">{{ a.action_type }}</span></td>
+            <td style="white-space: pre-wrap; max-width: 320px">{{ a.old_values or '-' }}</td>
+            <td style="white-space: pre-wrap; max-width: 320px">{{ a.new_values or '-' }}</td>
+            <td>{{ a.ip_address or '-' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if audits.pages > 1 %}
+    <nav aria-label="Paginación">
+      <ul class="pagination justify-content-center">
+        {% if audits.has_prev %}
+        <li class="page-item">
+          <a class="page-link" href="{{ url_for('admin.auditoria', page=audits.prev_num) }}">Anterior</a>
+        </li>
+        {% endif %}
+
+        {% for page_num in audits.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+          {% if page_num %}
+            {% if page_num != audits.page %}
+              <li class="page-item"><a class="page-link" href="{{ url_for('admin.auditoria', page=page_num) }}">{{ page_num }}</a></li>
+            {% else %}
+              <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+            {% endif %}
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          {% endif %}
+        {% endfor %}
+
+        {% if audits.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="{{ url_for('admin.auditoria', page=audits.next_num) }}">Siguiente</a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

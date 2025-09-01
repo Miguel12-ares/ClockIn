@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Gestión de Usuarios</h2>
+    <a href="{{ url_for('admin.nuevo_usuario') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nuevo Usuario
+    </a>
+</div>
+
+<!-- Búsqueda -->
+<form method="GET" class="mb-4">
+    <div class="row">
+        <div class="col-md-6">
+            <input type="text" class="form-control" name="search" 
+                   placeholder="Buscar por nombre o ID documento..." 
+                   value="{{ search }}">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-outline-primary">Buscar</button>
+        </div>
+    </div>
+</form>
+
+<!-- Tabla de usuarios -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID Documento</th>
+                        <th>Nombre</th>
+                        <th>Tipo</th>
+                        <th>Zona</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users.items %}
+                    <tr>
+                        <td>{{ user.idDocumento }}</td>
+                        <td>{{ user.first_name }} {{ user.last_name }}</td>
+                        <td>
+                            <span class="badge bg-{% if user.user_type.type_name == 'admin' %}danger{% else %}info{% endif %}">
+                                {{ user.user_type.type_name }}
+                            </span>
+                        </td>
+                        <td>{{ user.zona.sede_nombre }}</td>
+                        <td>
+                            <span class="badge bg-{% if user.is_active %}success{% else %}secondary{% endif %}">
+                                {{ user.estado.name }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('admin.editar_usuario', user_id=user.id) }}" 
+                               class="btn btn-sm btn-outline-primary">Editar</a>
+                            {% if user.id != session.user_id %}
+                            <form method="POST" action="{{ url_for('admin.eliminar_usuario', user_id=user.id) }}" 
+                                  class="d-inline" onsubmit="return confirm('¿Estás seguro?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginación -->
+        {% if users.pages > 1 %}
+        <nav aria-label="Paginación">
+            <ul class="pagination justify-content-center">
+                {% if users.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.usuarios', page=users.prev_num, search=search) }}">Anterior</a>
+                    </li>
+                {% endif %}
+                
+                {% for page_num in users.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num != users.page %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin.usuarios', page=page_num, search=search) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if users.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.usuarios', page=users.next_num, search=search) }}">Siguiente</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
