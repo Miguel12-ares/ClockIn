@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{% if user %}Editar Usuario{% else %}Nuevo Usuario{% endif %}{% endblock %}
+
+{% block content %}
+<h2>{% if user %}Editar Usuario{% else %}Nuevo Usuario{% endif %}</h2>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">ID Documento *</label>
+                                <input type="number" class="form-control" name="idDocumento" 
+                                       value="{{ user.idDocumento if user }}" required
+                                       {% if user %}readonly{% endif %}>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Primer Nombre *</label>
+                                <input type="text" class="form-control" name="first_name" 
+                                       value="{{ user.first_name if user }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Apellido *</label>
+                                <input type="text" class="form-control" name="last_name" 
+                                       value="{{ user.last_name if user }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Contraseña {% if not user %}*{% endif %}</label>
+                                <input type="password" class="form-control" name="password" 
+                                       {% if not user %}required{% endif %}>
+                                {% if user %}
+                                    <small class="text-muted">Dejar vacío para mantener la contraseña actual</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Tipo de Usuario *</label>
+                                <select class="form-select" name="user_type_id" required>
+                                    {% for type in user_types %}
+                                        <option value="{{ type.id }}" 
+                                                {% if user and user.user_type_id == type.id %}selected{% endif %}>
+                                            {{ type.type_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Zona *</label>
+                                <select class="form-select" name="zona_id" required>
+                                    {% for zona in zonas %}
+                                        <option value="{{ zona.id }}" 
+                                                {% if user and user.zona_id == zona.id %}selected{% endif %}>
+                                            {{ zona.sede_nombre }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        {% if user and estados %}
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Estado</label>
+                                <select class="form-select" name="estado_id">
+                                    {% for estado in estados %}
+                                        <option value="{{ estado.id }}" 
+                                                {% if user.estado_id == estado.id %}selected{% endif %}>
+                                            {{ estado.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            {% if user %}Actualizar{% else %}Crear{% endif %} Usuario
+                        </button>
+                        <a href="{{ url_for('admin.usuarios') }}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

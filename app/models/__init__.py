@@ -7,3 +7,8 @@ from app.models.access_log import AccessLog
 from app.models.active_session import ActiveSession
 from app.models.anomaly import Anomaly
 from app.models.system_audit import SystemAudit
+
+__all__ = [
+    'UserType', 'Zona', 'Estado', 'User', 'AdminZona',
+    'AccessLog', 'ActiveSession', 'Anomaly', 'SystemAudit'
+]

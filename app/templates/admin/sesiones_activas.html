@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Sesiones Activas{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0"><i class="fas fa-user-clock me-2"></i>Sesiones Activas</h3>
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('attendance.sesiones_activas') }}">Actualizar</a>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Documento</th>
+        <th>Nombre</th>
+        <th>Entrada</th>
+        <th>Tiempo transcurrido</th>
+        <th>Estatus</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for session_row, user in pagination.items %}
+      <tr>
+        <td>{{ user.idDocumento }}</td>
+        <td>{{ user.first_name }} {{ user.last_name }}</td>
+        <td>{{ session_row.entry_time.strftime('%Y-%m-%d %H:%M:%S') if session_row.entry_time }}</td>
+        <td>
+          <span class="elapsed" data-entry="{{ (session_row.entry_time|default(now)).isoformat() }}"></span>
+        </td>
+        <td><span class="badge bg-warning text-dark">{{ session_row.status }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="text-center text-muted">Sin sesiones activas</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<nav aria-label="Paginación">
+  <ul class="pagination">
+    {% if pagination.has_prev %}
+      <li class="page-item"><a class="page-link" href="{{ url_for('attendance.sesiones_activas', page=pagination.prev_num) }}">&laquo;</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+    {% endif %}
+
+    <li class="page-item disabled"><span class="page-link">Página {{ pagination.page }} de {{ pagination.pages or 1 }}</span></li>
+
+    {% if pagination.has_next %}
+      <li class="page-item"><a class="page-link" href="{{ url_for('attendance.sesiones_activas', page=pagination.next_num) }}">&raquo;</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+    {% endif %}
+  </ul>
+</nav>
+
+<script>
+// Simple elapsed time updater
+function fmt(ms){
+  const s = Math.floor(ms/1000);
+  const h = Math.floor(s/3600);
+  const m = Math.floor((s%3600)/60);
+  const ss = s%60;
+  const pad=n=>String(n).padStart(2,'0');
+  return `${pad(h)}:${pad(m)}:${pad(ss)}`;
+}
+function tick(){
+  const now = new Date();
+  document.querySelectorAll('.elapsed').forEach(el=>{
+    const entry = new Date(el.dataset.entry);
+    const diff = Math.max(0, now-entry);
+    el.textContent = fmt(diff);
+  });
+}
+setInterval(tick, 1000);
+window.addEventListener('DOMContentLoaded', tick);
+</script>
+{% endblock %}

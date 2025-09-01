@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Agregar en la sección admin -->
+{% if user_type == 'admin' %}
+    <div class="card">
+        <div class="card-header">Panel de Administración</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <a href="{{ url_for('admin.usuarios') }}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-users"></i><br>
+                        Gestión de Usuarios
+                    </a>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <a href="{{ url_for('admin.auditoria') }}" class="btn btn-outline-info w-100">
+                        <i class="fas fa-history"></i><br>
+                        Auditoría del Sistema
+                    </a>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <a href="{{ url_for('attendance.sesiones_activas') }}" class="btn btn-outline-warning w-100">
+                        <i class="fas fa-user-clock"></i><br>
+                        Sesiones Activas
+                    </a>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <a href="{{ url_for('attendance.historial_asistencia') }}" class="btn btn-outline-success w-100">
+                        <i class="fas fa-clipboard-list"></i><br>
+                        Historial Asistencia
+                    </a>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <a href="{{ url_for('admin.registrar_entrada') }}" class="btn btn-outline-success w-100">
+                        <i class="fas fa-sign-in-alt"></i><br>
+                        Registrar Entrada
+                    </a>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <a href="{{ url_for('admin.registrar_salida') }}" class="btn btn-outline-warning w-100">
+                        <i class="fas fa-sign-out-alt"></i><br>
+                        Registrar Salida  
+                    </a>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <a href="#" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-chart-bar"></i><br>
+                        Reportes (Próximamente)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="alert alert-info">Bienvenido. Registro disponible próximamente.</div>
+{% endif %}
+{% endblock %}
